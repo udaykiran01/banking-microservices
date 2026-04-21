@@ -1,0 +1,63 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Values.apiService.name }}
+  labels:
+    app: {{ .Values.apiService.name }}
+spec:
+  replicas: {{ .Values.apiService.replicaCount }}
+  selector:
+    matchLabels:
+      app: {{ .Values.apiService.name }}
+  template:
+    metadata:
+      labels:
+        app: {{ .Values.apiService.name }}
+    spec:
+      containers:
+        - name: {{ .Values.apiService.name }}
+          image: "{{ .Values.apiService.image.repository }}:{{ .Values.apiService.image.tag }}"
+          imagePullPolicy: {{ .Values.apiService.image.pullPolicy }}
+          env:
+            - name: DB_HOST
+              valueFrom:
+                secretKeyRef:
+                  name: postgres-secret-kv
+                  key: DB_HOST
+            - name: DB_PORT
+              valueFrom:
+                secretKeyRef:
+                  name: postgres-secret-kv
+                  key: DB_PORT
+            - name: DB_USER
+              valueFrom:
+                secretKeyRef:
+                  name: postgres-secret-kv
+                  key: DB_USER
+            - name: DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: postgres-secret-kv
+                  key: DB_PASSWORD
+            - name: DB_NAME
+              valueFrom:
+                secretKeyRef:
+                  name: postgres-secret-kv
+                  key: DB_NAME
+            - name: Kafka_BROKERS
+              value: "my-cluster-kafka-bootstrap.kafka.svc:9092"
+          volumeMounts:
+            - name: secrets-store-inline
+              mountPath: "/mnt/secrets-store"
+              readOnly: true
+          ports:
+            - containerPort: {{ .Values.apiService.containerPort }}
+          resources:
+{{ toYaml .Values.resources | indent 12 }}
+      volumes:
+        - name: secrets-store-inline
+          csi:
+            driver: secrets-store.csi.k8s.io
+            readOnly: true
+            volumeAttributes:
+              secretProviderClass: "postgres-kv-secrets"

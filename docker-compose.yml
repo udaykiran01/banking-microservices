@@ -1,0 +1,15 @@
+services:
+  api-service:
+    build: ./api-service
+    container_name: api-service
+    ports:
+      - "3000:3000"
+
+  worker-service:
+    build: ./worker-service
+    container_name: worker-service
+    depends_on:
+      - api-service
+    environment:
+      API_BASE_URL: http://api-service:3000
+      POLL_INTERVAL_MS: 5000

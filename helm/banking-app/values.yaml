@@ -1,0 +1,24 @@
+namespace: default
+
+apiService:
+  name: api-service
+  replicaCount: 1
+  image:
+    repository: bankingappdevacr31065.azurecr.io/api-service
+    tag: v3
+    pullPolicy: IfNotPresent
+  containerPort: 3000
+  service:
+    type: ClusterIP
+    port: 3000
+
+workerService:
+  name: worker-service
+  replicaCount: 1
+  image:
+    repository: bankingappdevacr31065.azurecr.io/worker-service
+    tag: v4
+    pullPolicy: IfNotPresent
+  pollIntervalMs: "5000"
+
+resources: {}

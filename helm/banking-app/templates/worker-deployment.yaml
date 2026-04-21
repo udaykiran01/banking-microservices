@@ -1,0 +1,29 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Values.workerService.name }}
+  labels:
+    app: {{ .Values.workerService.name }}
+spec:
+  replicas: {{ .Values.workerService.replicaCount }}
+  selector:
+    matchLabels:
+      app: {{ .Values.workerService.name }}
+  template:
+    metadata:
+      labels:
+        app: {{ .Values.workerService.name }}
+    spec:
+      containers:
+        - name: {{ .Values.workerService.name }}
+          image: "{{ .Values.workerService.image.repository }}:{{ .Values.workerService.image.tag }}"
+          imagePullPolicy: {{ .Values.workerService.image.pullPolicy }}
+          env:
+            - name: API_BASE_URL
+              value: "http://{{ .Values.apiService.name }}:{{ .Values.apiService.service.port }}"
+            - name: POLL_INTERVAL_MS
+              value: "{{ .Values.workerService.pollIntervalMs }}"
+            - name: Kafka_BROKERS
+              value: "my-cluster-kafka-bootstrap.kafka.svc:9092"  
+          resources:
+{{ toYaml .Values.resources | indent 12 }}

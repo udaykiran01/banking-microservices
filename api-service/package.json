@@ -1,0 +1,14 @@
+{
+  "name": "api-service",
+  "version": "1.0.0",
+  "description": "API service for banking microservices demo",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.19.2",
+    "kafkajs": "^2.2.4",
+    "pg": "^8.20.0"
+  }
+}

@@ -1,0 +1,44 @@
+apiVersion: secrets-store.csi.x-k8s.io/v1
+kind: SecretProviderClass
+metadata:
+  name: postgres-kv-secrets
+  namespace: banking-app
+spec:
+  provider: azure
+  parameters:
+    useVMManagedIdentity: "true" # Set to true if using managed identity for authentication
+    userAssignedIdentityID: "6e52c76f-f52b-4bac-8cd2-4d16dc2f5fe9" # Replace with your user-assigned managed identity client ID
+    usePodIdentity: "false"
+    keyvaultName: "banking-app-dev-kv"
+    tenantId: "45c9a3d3-8e0a-4181-b5fd-d8a4cab82ff8"
+    objects: |
+      array:
+        - |
+          objectName: DB-HOST
+          objectType: secret
+        - |
+          objectName: DB-PORT
+          objectType: secret
+        - |
+          objectName: DB-USER
+          objectType: secret
+        - |
+          objectName: DB-PASSWORD
+          objectType: secret
+        - |
+          objectName: DB-NAME
+          objectType: secret
+  secretObjects:
+    - secretName: postgres-secret-kv
+      type: Opaque
+      data:
+        - objectName: DB-HOST
+          key: DB_HOST
+        - objectName: DB-PORT
+          key: DB_PORT
+        - objectName: DB-USER
+          key: DB_USER
+        - objectName: DB-PASSWORD
+          key: DB_PASSWORD
+        - objectName: DB-NAME
+          key: DB_NAME
