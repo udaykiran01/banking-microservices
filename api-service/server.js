@@ -1,11 +1,35 @@
 const express = require("express");
 const { Pool } = require("pg");
 const { Kafka } = require("kafkajs");
+const client = require("prom-client");
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 
 app.use(express.json());
+
+// Prometheus metrics
+const register = new client.Registry();
+client.collectDefaultMetrics({ register });
+
+const httpRequestCounter = new client.Counter({
+  name: "http_requests_total",
+  help: "Total number of HTTP requests",
+  labelNames: ["method", "route", "status"],
+});
+
+register.registerMetric(httpRequestCounter);
+
+app.use((req, res, next) => {
+  res.on("finish", () => {
+    httpRequestCounter.inc({
+      method: req.method,
+      route: req.path,
+      status: String(res.statusCode),
+    });
+  });
+  next();
+});
 
 const pool = new Pool({
   host: process.env.DB_HOST,
@@ -20,7 +44,9 @@ const pool = new Pool({
 
 const kafka = new Kafka({
   clientId: "api-service",
-  brokers: [process.env.KAFKA_BROKER || "my-cluster-kafka-bootstrap.kafka.svc:9092"],
+  brokers: [
+    process.env.KAFKA_BROKER || "my-cluster-kafka-bootstrap.kafka.svc:9092",
+  ],
 });
 
 const producer = kafka.producer();
@@ -49,6 +75,15 @@ app.get("/health", async (req, res) => {
       database: "DISCONNECTED",
       error: error.message,
     });
+  }
+});
+
+app.get("/metrics", async (req, res) => {
+  try {
+    res.set("Content-Type", register.contentType);
+    res.end(await register.metrics());
+  } catch (error) {
+    res.status(500).end(error.message);
   }
 });
 

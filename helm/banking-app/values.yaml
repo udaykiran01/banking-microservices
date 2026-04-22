@@ -5,7 +5,7 @@ apiService:
   replicaCount: 1
   image:
     repository: bankingappdevacr31065.azurecr.io/api-service
-    tag: v3
+    tag: v5
     pullPolicy: IfNotPresent
   containerPort: 3000
   service:
@@ -21,4 +21,10 @@ workerService:
     pullPolicy: IfNotPresent
   pollIntervalMs: "5000"
 
-resources: {}
+resources:
+  requests:
+    cpu: "100m"
+    memory: "128Mi"
+  limits:
+    cpu: "500m"
+    memory: "512Mi"

@@ -52,6 +52,25 @@ spec:
               readOnly: true
           ports:
             - containerPort: {{ .Values.apiService.containerPort }}
+
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: {{ .Values.apiService.containerPort }}
+            initialDelaySeconds: 10
+            periodSeconds: 5 
+            timeoutSeconds: 2
+            failureThreshold: 3
+
+          livenessProbe:
+            httpGet:  
+              path: /health
+              port: {{ .Values.apiService.containerPort }}
+            initialDelaySeconds: 30
+            periodSeconds: 10
+            timeoutSeconds: 2
+            failureThreshold: 3
+
           resources:
 {{ toYaml .Values.resources | indent 12 }}
       volumes:

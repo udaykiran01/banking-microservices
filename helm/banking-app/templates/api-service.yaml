@@ -10,5 +10,6 @@ spec:
     app: {{ .Values.apiService.name }}
   ports:
     - protocol: TCP
+      name: http
       port: {{ .Values.apiService.service.port }}
       targetPort: {{ .Values.apiService.containerPort }}
