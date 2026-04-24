@@ -1,0 +1,41 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Values.aiAnalyzerService.name }}
+  labels:
+    app: {{ .Values.aiAnalyzerService.name }}
+spec:
+  replicas: {{ .Values.aiAnalyzerService.replicaCount }}
+  selector:
+    matchLabels:
+      app: {{ .Values.aiAnalyzerService.name }}
+  template:
+    metadata:
+      labels:
+        app: {{ .Values.aiAnalyzerService.name }}
+    spec:
+      containers:
+        - name: {{ .Values.aiAnalyzerService.name }}
+          image: "{{ .Values.aiAnalyzerService.image.repository }}:{{ .Values.aiAnalyzerService.image.tag }}"
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: http
+              containerPort: {{ .Values.aiAnalyzerService.containerPort }}
+          env:
+            - name: PORT
+              value: "{{ .Values.aiAnalyzerService.containerPort }}"
+            - name: AZURE_OPENAI_ENDPOINT
+              valueFrom:
+                secretKeyRef:
+                  name: azure-openai-secret
+                  key: AZURE_OPENAI_ENDPOINT
+            - name: AZURE_OPENAI_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: azure-openai-secret
+                  key: AZURE_OPENAI_KEY
+            - name: AZURE_OPENAI_DEPLOYMENT
+              valueFrom:
+                secretKeyRef:
+                  name: azure-openai-secret
+                  key: AZURE_OPENAI_DEPLOYMENT

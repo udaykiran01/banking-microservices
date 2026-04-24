@@ -1,0 +1,14 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ .Values.aiAnalyzerService.name }}
+  labels:
+    app: {{ .Values.aiAnalyzerService.name }}
+spec:
+  type: {{ .Values.aiAnalyzerService.service.type }}
+  selector:
+    app: {{ .Values.aiAnalyzerService.name }}
+  ports:
+    - name: http
+      port: {{ .Values.aiAnalyzerService.service.port }}
+      targetPort: {{ .Values.aiAnalyzerService.containerPort }}

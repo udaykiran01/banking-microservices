@@ -1,18 +1,18 @@
 apiVersion: monitoring.coreos.com/v1
 kind: ServiceMonitor
 metadata:
-  name: api-service-monitor
+  name: worker-service-monitor
   namespace: monitoring
   labels:
     release: monitoring
 spec:
   selector:
     matchLabels:
-      app: api-service
+      app: worker-service
   namespaceSelector:
     matchNames:
       - banking-app
   endpoints:
-    - port: http
+    - port: metrics
       path: /metrics
       interval: 10s

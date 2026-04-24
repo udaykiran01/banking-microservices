@@ -56,6 +56,15 @@ jobs:
             ./worker-service \
             --push
 
+
+      - name: Build and push ai-analyzer-service
+        run: |
+          docker buildx build \
+            --platform linux/amd64 \
+            -t $ACR_LOGIN_SERVER/ai-analyzer-service:${IMAGE_TAG} \
+            ./ai-analyzer-service \
+            --push      
+
       - name: Get AKS credentials
         run: az aks get-credentials --resource-group $RESOURCE_GROUP --name $AKS_CLUSTER_NAME --overwrite-existing
 
@@ -70,4 +79,6 @@ jobs:
             --set apiService.image.repository=$ACR_LOGIN_SERVER/api-service \
             --set apiService.image.tag=$IMAGE_TAG \
             --set workerService.image.repository=$ACR_LOGIN_SERVER/worker-service \
-            --set workerService.image.tag=$IMAGE_TAG
+            --set workerService.image.tag=$IMAGE_TAG \
+            --set aiAnalyzerService.image.repository=$ACR_LOGIN_SERVER/ai-analyzer-service \
+            --set aiAnalyzerService.image.tag=$IMAGE_TAG

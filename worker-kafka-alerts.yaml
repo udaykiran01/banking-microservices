@@ -1,0 +1,20 @@
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: worker-kafka-alerts
+  namespace: monitoring
+  labels:
+    release: monitoring
+spec:
+  groups:
+    - name: worker-kafka.rules
+      rules:
+        - alert: KafkaWorkerProcessingErrors
+          expr: increase(kafka_processing_errors_total[5m]) > 0
+          for: 1m
+          labels:
+            severity: critical
+            app: worker-service
+          annotations:
+            summary: "Kafka worker processing errors detected"
+            description: "Worker consumed Kafka messages but failed during processing."

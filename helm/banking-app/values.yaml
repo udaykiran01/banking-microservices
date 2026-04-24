@@ -21,6 +21,18 @@ workerService:
     pullPolicy: IfNotPresent
   pollIntervalMs: "5000"
 
+
+aiAnalyzerService:
+  name: ai-analyzer-service
+  replicaCount: 1
+  image:
+    repository: bankingappdevacr31065.azurecr.io/ai-analyzer-service
+    tag: latest
+  containerPort: 5000
+  service:
+    type: ClusterIP
+    port: 5000 
+
 resources:
   requests:
     cpu: "100m"
