@@ -225,14 +225,15 @@ resource "azuread_service_principal" "github_actions" {
   client_id = azuread_application.github_actions.client_id
 }
 
-resource "azuread_application_federated_identity_credential" "github_main" {
-  application_id = azuread_application.github_actions.id
-  display_name   = var.github_federated_credential_name
-  description    = "GitHub Actions OIDC trust for ${var.github_repository} ${var.github_branch} deploys"
-  audiences      = ["api://AzureADTokenExchange"]
-  issuer         = "https://token.actions.githubusercontent.com"
-  subject        = "repo:${var.github_repository}:ref:refs/heads/${var.github_branch}"
-}
+# resource "azuread_application_federated_identity_credential" "github_main" {
+#  application_id = azuread_application.github_actions.id
+#  display_name   = var.github_federated_credential_name
+#  description    = "GitHub Actions OIDC trust for ${var.github_repository} ${var.github_branch} deploys"
+#  audiences      = ["api://AzureADTokenExchange"]
+#  issuer         = "https://token.actions.githubusercontent.com"
+#  subject        = "repo:${var.github_repository}:ref:refs/heads/${var.github_branch}"
+# }
+
 
 resource "azurerm_role_assignment" "github_contributor" {
   scope                = azurerm_resource_group.main.id
