@@ -30,20 +30,17 @@ resource "helm_release" "strimzi" {
 }
 
 
-resource "helm_release" "csi_driver" {
-  name      = "csi-secrets-store"
-  namespace = "kube-system"
-
-  repository = "https://kubernetes-sigs.github.io/secrets-store-csi-driver/charts"
-  chart      = "secrets-store-csi-driver"
-}
-
 resource "helm_release" "azure_kv_provider" {
-  name      = "azure-keyvault-provider"
-  namespace = "kube-system"
+  name       = "azure-keyvault-provider"
+  namespace  = "kube-system"
 
   repository = "https://azure.github.io/secrets-store-csi-driver-provider-azure/charts"
   chart      = "csi-secrets-store-provider-azure"
+
+  set {
+    name  = "secrets-store-csi-driver.install"
+    value = "false"
+  }
 }
 
 
