@@ -124,3 +124,47 @@ jobs:
 
       - name: Terraform apply
         run: terraform apply -auto-approve tfplan
+
+        
+  apply-addons:
+    name: Apply Cluster Add-ons
+    runs-on: ubuntu-latest
+    needs: apply
+    if: github.event_name == 'workflow_dispatch' && inputs.apply && github.ref_name == 'main'
+    environment: dev
+
+    defaults:
+      run:
+        working-directory: terraform/02-cluster-addons
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Azure login with OIDC
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Get AKS credentials
+        run: |
+          az aks get-credentials \
+            --resource-group rg-banking-app-dev \
+            --name banking-app-dev-aks \
+            --overwrite-existing
+
+      - name: Verify cluster
+        run: kubectl get nodes
+
+      - name: Set up Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.9.0
+
+      - name: Terraform init add-ons
+        run: terraform init
+
+      - name: Terraform apply add-ons
+        run: terraform apply -auto-approve
