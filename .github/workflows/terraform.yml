@@ -137,6 +137,10 @@ jobs:
       run:
         working-directory: terraform/02-cluster-addons
 
+
+    env:
+      KUBECONFIG: /home/runner/.kube/config    
+
     steps:
       - name: Checkout
         uses: actions/checkout@v4
