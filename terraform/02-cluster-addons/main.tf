@@ -31,8 +31,8 @@ resource "helm_release" "strimzi" {
 
 
 resource "helm_release" "azure_kv_provider" {
-  name       = "azure-keyvault-provider"
-  namespace  = "kube-system"
+  name      = "azure-keyvault-provider"
+  namespace = "kube-system"
 
   repository = "https://azure.github.io/secrets-store-csi-driver-provider-azure/charts"
   chart      = "csi-secrets-store-provider-azure"
