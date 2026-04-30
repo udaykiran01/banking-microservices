@@ -1,0 +1,15 @@
+global:
+  resolve_timeout: 5m
+
+route:
+  receiver: ai-analyzer
+  group_by: ["alertname", "app"]
+  group_wait: 10s
+  group_interval: 1m
+  repeat_interval: 30m
+
+receivers:
+  - name: ai-analyzer
+    webhook_configs:
+      - url: "http://ai-analyzer-service.banking-app.svc.cluster.local:5000/alert"
+        send_resolved: true
