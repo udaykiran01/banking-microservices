@@ -37,10 +37,12 @@ resource "helm_release" "azure_kv_provider" {
   repository = "https://azure.github.io/secrets-store-csi-driver-provider-azure/charts"
   chart      = "csi-secrets-store-provider-azure"
 
-  set {
+  set = [{
     name  = "secrets-store-csi-driver.install"
     value = "false"
-  }
+    }
+
+  ]
 }
 
 
