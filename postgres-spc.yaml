@@ -7,10 +7,10 @@ spec:
   provider: azure
   parameters:
     useVMManagedIdentity: "true" # Set to true if using managed identity for authentication
-    userAssignedIdentityID: "6e52c76f-f52b-4bac-8cd2-4d16dc2f5fe9" # Replace with your user-assigned managed identity client ID
+    userAssignedIdentityID: "15e5f581-ae8e-4905-917f-b46add268bed" # AKS Key Vault CSI identity client ID
     usePodIdentity: "false"
-    keyvaultName: "banking-app-dev-kv"
-    tenantId: "45c9a3d3-8e0a-4181-b5fd-d8a4cab82ff8"
+    keyvaultName: "banking-dev-kv-31065"
+    tenantId: "385a89b9-c0e9-4284-804e-55f12c0b6424"
     objects: |
       array:
         - |

@@ -10,8 +10,8 @@ permissions:
   contents: read
 
 env:
-  ACR_NAME: bankingappdevacr31065
-  ACR_LOGIN_SERVER: bankingappdevacr31065.azurecr.io
+  ACR_NAME: bankingappdev
+  ACR_LOGIN_SERVER: bankingappdev.azurecr.io
   AKS_CLUSTER_NAME: banking-app-dev-aks
   RESOURCE_GROUP: rg-banking-app-dev
   NAMESPACE: banking-app

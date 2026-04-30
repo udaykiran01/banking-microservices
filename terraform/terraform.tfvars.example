@@ -1,0 +1,11 @@
+resource_group_name = "rg-banking-app-dev"
+acr_name            = "bankingappdev"
+aks_cluster_name    = "banking-app-dev-aks"
+key_vault_name      = "banking-dev-kv-31065"
+
+postgres_admin_password = "replace-with-a-strong-password"
+
+# Optional for ai-analyzer-service.
+azure_openai_endpoint   = "https://your-openai-resource.openai.azure.com"
+azure_openai_key        = "replace-with-your-azure-openai-key"
+azure_openai_deployment = "your-deployment-name"

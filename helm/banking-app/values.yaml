@@ -4,7 +4,7 @@ apiService:
   name: api-service
   replicaCount: 1
   image:
-    repository: bankingappdevacr31065.azurecr.io/api-service
+    repository: bankingappdev.azurecr.io/api-service
     tag: v5
     pullPolicy: IfNotPresent
   containerPort: 3000
@@ -16,7 +16,7 @@ workerService:
   name: worker-service
   replicaCount: 1
   image:
-    repository: bankingappdevacr31065.azurecr.io/worker-service
+    repository: bankingappdev.azurecr.io/worker-service
     tag: v4
     pullPolicy: IfNotPresent
   pollIntervalMs: "5000"
@@ -26,7 +26,7 @@ aiAnalyzerService:
   name: ai-analyzer-service
   replicaCount: 1
   image:
-    repository: bankingappdevacr31065.azurecr.io/ai-analyzer-service
+    repository: bankingappdev.azurecr.io/ai-analyzer-service
     tag: latest
   containerPort: 5000
   service:
