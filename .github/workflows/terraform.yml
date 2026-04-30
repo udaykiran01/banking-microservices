@@ -167,8 +167,11 @@ jobs:
         with:
           terraform_version: 1.9.0
 
+
       - name: Terraform init add-ons
-        run: terraform init
+        working-directory: terraform/02-cluster-addons
+        run: terraform init -upgrade
 
       - name: Terraform apply add-ons
-        run: terraform apply -auto-approve
+        working-directory: terraform/02-cluster-addons
+        run: terraform apply -auto-approve  
