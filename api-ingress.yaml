@@ -5,10 +5,9 @@ metadata:
   namespace: banking-app
 spec:
   ingressClassName: nginx
-  tls:
-    - secretName: banking-tls
   rules:
-    - http:
+    - host: udaybankingapp.site
+      http:
         paths:
           - path: /
             pathType: Prefix
