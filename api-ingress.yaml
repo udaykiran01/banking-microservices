@@ -4,6 +4,7 @@ metadata:
   name: banking-ingress
   namespace: banking-app
   annotations:
+    nginx.ingress.kubernetes.io/use-regex: "true"
     nginx.ingress.kubernetes.io/rewrite-target: /$2
 spec:
   ingressClassName: nginx
@@ -11,6 +12,7 @@ spec:
     - host: udaybankingapp.site
       http:
         paths:
+          # API ROUTING
           - path: /api(/|$)(.*)
             pathType: ImplementationSpecific
             backend:
@@ -18,6 +20,8 @@ spec:
                 name: api-service
                 port:
                   number: 3000
+
+          # FRONTEND ROUTING
           - path: /
             pathType: Prefix
             backend:
