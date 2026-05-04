@@ -90,6 +90,6 @@ jobs:
             --set workerService.image.repository=$ACR_LOGIN_SERVER/worker-service \
             --set workerService.image.tag=$IMAGE_TAG \
             --set aiAnalyzerService.image.repository=$ACR_LOGIN_SERVER/ai-analyzer-service \
-            --set aiAnalyzerService.image.tag=$IMAGE_TAG
+            --set aiAnalyzerService.image.tag=$IMAGE_TAG \
             --set frontendService.image.repository=$ACR_LOGIN_SERVER/frontend-service \
             --set frontendService.image.tag=$IMAGE_TAG
