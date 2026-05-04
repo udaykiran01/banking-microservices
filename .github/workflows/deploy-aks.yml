@@ -66,6 +66,14 @@ jobs:
             ./ai-analyzer-service \
             --push      
 
+      - name: Build and push frontend-service
+        run: |
+          docker buildx build \
+            --platform linux/amd64 \
+            -t $ACR_LOGIN_SERVER/frontend-service:${IMAGE_TAG} \
+            ./frontend \
+            --push      
+
       - name: Get AKS credentials
         run: az aks get-credentials --resource-group $RESOURCE_GROUP --name $AKS_CLUSTER_NAME --overwrite-existing
 
@@ -83,3 +91,5 @@ jobs:
             --set workerService.image.tag=$IMAGE_TAG \
             --set aiAnalyzerService.image.repository=$ACR_LOGIN_SERVER/ai-analyzer-service \
             --set aiAnalyzerService.image.tag=$IMAGE_TAG
+            --set frontendService.image.repository=$ACR_LOGIN_SERVER/frontend-service \
+            --set frontendService.image.tag=$IMAGE_TAG

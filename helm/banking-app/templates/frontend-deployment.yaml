@@ -1,0 +1,23 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: frontend-service
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app: frontend-service
+spec:
+  replicas: {{ .Values.frontendService.replicaCount }}
+  selector:
+    matchLabels:
+      app: frontend-service
+  template:
+    metadata:
+      labels:
+        app: frontend-service
+    spec:
+      containers:
+        - name: frontend-service
+          image: "{{ .Values.frontendService.image.repository }}:{{ .Values.frontendService.image.tag }}"
+          imagePullPolicy: {{ .Values.frontendService.image.pullPolicy }}
+          ports:
+            - containerPort: {{ .Values.frontendService.containerPort }}

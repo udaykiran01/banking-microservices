@@ -1,0 +1,14 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: frontend-service
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app: frontend-service
+spec:
+  type: {{ .Values.frontendService.service.type }}
+  selector:
+    app: frontend-service
+  ports:
+    - port: {{ .Values.frontendService.service.port }}
+      targetPort: {{ .Values.frontendService.containerPort }}
