@@ -1,0 +1,15 @@
+# Terraform
+.terraform/
+*.tfstate
+*.tfstate.backup
+crash.log
+
+# Sensitive / overrides
+*.tfvars
+*.tfvars.json
+
+# Lock file (optional — include if you want version pinning)
+# .terraform.lock.hcl
+
+# OS / editor
+.DS_Store
