@@ -12,3 +12,22 @@
   tags        = var.tags
 }
 
+module "ecr" {
+  source = "../../modules/ecr"
+
+  repository_names = var.repository_names
+  environment = var.environment
+  tags        = var.tags
+
+}
+
+module "eks" {
+  source = "../../modules/eks"
+
+  cluster_name      = var.cluster_name
+  kubernetes_version = var.kubernetes_version
+  vpc_id             = module.vpc.vpc_id
+  private_subnet_ids = module.vpc.private_subnet_ids
+  environment        = var.environment
+  tags               = var.tags
+}
