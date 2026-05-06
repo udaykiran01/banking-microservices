@@ -7,6 +7,9 @@ module "eks" {
 
   endpoint_public_access = true
   enable_cluster_creator_admin_permissions = true
+  authentication_mode = "API_AND_CONFIG_MAP"
+
+  enable_cluster_creator_admin_permissions = true
 
   vpc_id     = var.vpc_id
   subnet_ids = var.private_subnet_ids
@@ -20,6 +23,14 @@ module "eks" {
       max_size     = 2
       desired_size = 1
     }
+  }
+
+  public_subnet_tags = {
+    "kubernetes.io/role/elb" = "1"
+  }
+
+  private_subnet_tags = {
+    "kubernetes.io/role/internal-elb" = "1"
   }
 
   tags = merge(var.tags, {
