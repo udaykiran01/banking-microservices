@@ -1,0 +1,25 @@
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: api-slo-alerts
+  namespace: monitoring
+  labels:
+    release: monitoring
+spec:
+  groups:
+    - name: api-slo.rules
+      rules:
+        - alert: ApiHighErrorRate
+          expr: |
+            (
+              sum(rate(http_requests_total{job="api-service",status=~"5.."}[5m]))
+              /
+              sum(rate(http_requests_total{job="api-service"}[5m]))
+            ) > 0.01
+          for: 2m
+          labels:
+            severity: critical
+            service: api-service
+          annotations:
+            summary: "API error rate is above 1%"
+            description: "api-service is violating the 99% availability SLO."
