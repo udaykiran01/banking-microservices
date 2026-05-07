@@ -31,3 +31,18 @@ module "eks" {
   environment        = var.environment
   tags               = var.tags
 }
+
+module "eks_addons" {
+  source = "../../modules/eks-addons"
+
+  cluster_name = module.eks.cluster_name
+  vpc_id       = module.vpc.vpc_id
+}
+
+module "helm_banking_app" {
+  source = "../../modules/helm-banking-app"
+
+  depends_on = [
+    module.eks_addons
+  ]
+}

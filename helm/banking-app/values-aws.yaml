@@ -1,0 +1,57 @@
+namespace: default
+
+apiService:
+  name: api-service
+  replicaCount: 1
+  image:
+    repository: 565393056683.dkr.ecr.ca-central-1.amazonaws.com/banking-api-service
+    tag: v1
+    pullPolicy: IfNotPresent
+  containerPort: 3000
+  service:
+    type: ClusterIP
+    port: 3000
+
+workerService:
+  name: worker-service
+  replicaCount: 1
+  image:
+    repository: 565393056683.dkr.ecr.ca-central-1.amazonaws.com/banking-worker-service
+    tag: v1
+    pullPolicy: IfNotPresent
+  pollIntervalMs: "5000"
+
+
+aiAnalyzerService:
+  name: ai-analyzer-service
+  replicaCount: 1
+  image:
+    repository: 565393056683.dkr.ecr.ca-central-1.amazonaws.com/banking-ai-analyzer-service
+    tag: v1
+  containerPort: 5000
+  service:
+    type: ClusterIP
+    port: 5000 
+
+resources:
+  requests:
+    cpu: "100m"
+    memory: "128Mi"
+  limits:
+    cpu: "500m"
+    memory: "512Mi"
+
+
+frontendService:
+  image:
+    repository: 565393056683.dkr.ecr.ca-central-1.amazonaws.com/banking-frontend-service
+    tag: v1
+    pullPolicy: IfNotPresent
+
+  replicaCount: 1
+
+  service:
+    type: ClusterIP
+    port: 80
+
+  containerPort: 80    

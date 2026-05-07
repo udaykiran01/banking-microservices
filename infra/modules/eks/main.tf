@@ -9,7 +9,7 @@ module "eks" {
   enable_cluster_creator_admin_permissions = true
   authentication_mode = "API_AND_CONFIG_MAP"
 
-  enable_cluster_creator_admin_permissions = true
+  
 
   vpc_id     = var.vpc_id
   subnet_ids = var.private_subnet_ids
@@ -25,13 +25,24 @@ module "eks" {
     }
   }
 
-  public_subnet_tags = {
-    "kubernetes.io/role/elb" = "1"
+addons = {
+  coredns = {
+    most_recent = true
   }
 
-  private_subnet_tags = {
-    "kubernetes.io/role/internal-elb" = "1"
+  kube-proxy = {
+    most_recent = true
   }
+
+  vpc-cni = {
+    most_recent = true
+  }
+
+  eks-pod-identity-agent = {
+    most_recent = true
+  }
+}
+  
 
   tags = merge(var.tags, {
     Environment = var.environment
