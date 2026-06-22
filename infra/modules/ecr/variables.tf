@@ -10,5 +10,5 @@ variable "tags" {
 }
 
 variable "repository_names" {
-    type = list(string)
+  type = list(string)
 }

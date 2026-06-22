@@ -1,31 +1,31 @@
 variable "vpc_name" {
-    type = string
-    description = "name of the vpc"
+  type        = string
+  description = "name of the vpc"
 }
 
 variable "vpc_cidr" {
-    type = string
-    default = "10.0.0.0/16"
+  type    = string
+  default = "10.0.0.0/16"
 }
 
 variable "private_subnets" {
-    type = list(string)
+  type = list(string)
 }
 
 variable "public_subnets" {
-    type = list(string)
+  type = list(string)
 }
 
 variable "azs" {
-    type = list(string)
+  type = list(string)
 }
 
 variable "enable_nat_gateway" {
-    type = bool
+  type = bool
 }
 
 variable "single_nat_gateway" {
-    type = bool
+  type = bool
 }
 
 variable "environment" {
@@ -43,7 +43,7 @@ variable "tags" {
 }
 
 variable "repository_names" {
-    type = list(string)
+  type = list(string)
 }
 
 variable "cluster_name" {
