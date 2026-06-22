@@ -10,6 +10,11 @@ locals {
   env = read_terragrunt_config(find_in_parent_folders("env.hcl"))
 }
 
+inputs = {
+  environment = local.env.locals.environment
+  location    = "canadacentral"
+}
+
 dependency "resource_group" {
   config_path = "../resource-group"
 }
