@@ -1,0 +1,94 @@
+name: Deploy AKS Dev
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - "api-service/**"
+      - "worker-service/**"
+      - "fraud-service/**"
+      - "frontend/**"
+      - "aks-platform/k8s/**"
+      - ".github/workflows/deploy-aks-dev.yml"
+
+env:
+  ACR_NAME: bankingacrdev
+  AKS_RESOURCE_GROUP: rg-banking-dev
+  AKS_CLUSTER_NAME: aks-banking-dev
+  NAMESPACE: banking-dev
+
+jobs:
+  deploy-aks-dev:
+    runs-on: ubuntu-latest
+    environment: dev
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Azure Login
+        uses: azure/login@v2
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Login to ACR
+        run: az acr login --name $ACR_NAME
+
+      - name: Build and Push API Image
+        run: |
+          docker build -t $ACR_NAME.azurecr.io/banking-api:${{ github.sha }} ./api-service
+          docker push $ACR_NAME.azurecr.io/banking-api:${{ github.sha }}
+
+      - name: Build and Push Worker Image
+        run: |
+          docker build -t $ACR_NAME.azurecr.io/worker-service:${{ github.sha }} ./worker-service
+          docker push $ACR_NAME.azurecr.io/worker-service:${{ github.sha }}
+
+      - name: Build and Push Fraud Service Image
+        run: |
+          docker build -t $ACR_NAME.azurecr.io/fraud-service:${{ github.sha }} ./fraud-service
+          docker push $ACR_NAME.azurecr.io/fraud-service:${{ github.sha }}
+
+      - name: Connect to AKS
+        run: |
+          az aks get-credentials \
+            --resource-group $AKS_RESOURCE_GROUP \
+            --name $AKS_CLUSTER_NAME \
+            --overwrite-existing
+
+      - name: Create Namespace
+        run: kubectl create namespace $NAMESPACE --dry-run=client -o yaml | kubectl apply -f -
+
+      - name: Deploy Kubernetes Manifests
+        run: kubectl apply -f aks-platform/k8s/ -n $NAMESPACE
+
+      - name: Update API Image
+        run: |
+          kubectl set image deployment/banking-api \
+            banking-api=$ACR_NAME.azurecr.io/banking-api:${{ github.sha }} \
+            -n $NAMESPACE
+
+      - name: Update Worker Image
+        run: |
+          kubectl set image deployment/worker-service \
+            worker-service=$ACR_NAME.azurecr.io/worker-service:${{ github.sha }} \
+            -n $NAMESPACE
+
+      - name: Update Fraud Service Image
+        run: |
+          kubectl set image deployment/fraud-service \
+            fraud-service=$ACR_NAME.azurecr.io/fraud-service:${{ github.sha }} \
+            -n $NAMESPACE
+
+      - name: Verify Rollout
+        run: |
+          kubectl rollout status deployment/banking-api -n $NAMESPACE
+          kubectl rollout status deployment/worker-service -n $NAMESPACE
+          kubectl rollout status deployment/fraud-service -n $NAMESPACE
+
+      - name: Upload Deployment Evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: aks-deployment-evidence
+          path: aks-platform/

@@ -1,0 +1,49 @@
+name: CI Security
+
+on:
+  pull_request:
+    paths:
+      - "api-service/**"
+      - "worker-service/**"
+      - "fraud-service/**"
+      - ".github/workflows/**"
+
+jobs:
+  ci-security:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Gitleaks Secret Scan
+        uses: gitleaks/gitleaks-action@v2
+
+      - name: Trivy Filesystem Scan
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: fs
+          scan-ref: .
+          severity: HIGH,CRITICAL
+          exit-code: 1
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: API Install
+        run: npm ci
+        working-directory: api-service
+
+      - name: API Audit
+        run: npm audit --audit-level=high
+        working-directory: api-service
+
+      - name: Worker Install
+        run: npm ci
+        working-directory: worker-service
+
+      - name: Worker Audit
+        run: npm audit --audit-level=high
+        working-directory: worker-service
