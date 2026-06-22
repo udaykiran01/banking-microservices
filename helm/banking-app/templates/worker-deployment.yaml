@@ -13,6 +13,9 @@ spec:
     metadata:
       labels:
         app: {{ .Values.workerService.name }}
+        version: v1
+        mesh-scope: critical
+        sidecar.istio.io/inject: "true"
     spec:
       containers:
         - name: {{ .Values.workerService.name }}
@@ -23,7 +26,10 @@ spec:
               value: "http://{{ .Values.apiService.name }}:{{ .Values.apiService.service.port }}"
             - name: POLL_INTERVAL_MS
               value: "{{ .Values.workerService.pollIntervalMs }}"
-            - name: Kafka_BROKERS
+            - name: KAFKA_BROKER
               value: "my-cluster-kafka-bootstrap.kafka.svc:9092"  
+          ports:
+            - name: metrics
+              containerPort: {{ .Values.workerService.metricsPort }}
           resources:
 {{ toYaml .Values.resources | indent 12 }}

@@ -1,0 +1,28 @@
+apiVersion: v1
+kind: Service
+metadata:
+  creationTimestamp: "2026-06-04T03:44:07Z"
+  labels:
+    app: banking-api
+  name: banking-api
+  namespace: openshif-tbanking-ap-dev
+  resourceVersion: "5615304405"
+  uid: 622d59d5-b0a1-482b-bd35-4e6f890114f7
+spec:
+  clusterIP: 172.30.213.137
+  clusterIPs:
+  - 172.30.213.137
+  internalTrafficPolicy: Cluster
+  ipFamilies:
+  - IPv4
+  ipFamilyPolicy: SingleStack
+  ports:
+  - port: 3000
+    protocol: TCP
+    targetPort: 3000
+  selector:
+    app: banking-api
+  sessionAffinity: None
+  type: ClusterIP
+status:
+  loadBalancer: {}

@@ -1,0 +1,30 @@
+apiVersion: networking.istio.io/v1beta1
+kind: Gateway
+metadata:
+  name: banking-gateway
+  namespace: banking-app
+spec:
+  selector:
+    istio: ingressgateway
+  servers:
+    - port:
+        number: 80
+        name: http
+        protocol: HTTP
+      hosts:
+        - udaybankingapp.site
+        - "*"
+---
+apiVersion: networking.istio.io/v1beta1
+kind: Sidecar
+metadata:
+  name: critical-services-egress
+  namespace: banking-app
+spec:
+  workloadSelector:
+    labels:
+      mesh-scope: critical
+  egress:
+    - hosts:
+        - "./*"
+        - "istio-system/*"

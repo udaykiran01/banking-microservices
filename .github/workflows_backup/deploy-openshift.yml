@@ -1,0 +1,72 @@
+name: Deploy to OpenShift
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - "api-service/**"
+      - "worker-service/**"
+      - "ai-analyzer-service/**"
+      - "frontend/**"
+      - "k8s/overlays/openshift-dev/**"
+      - ".github/workflows/deploy-openshift.yml"
+
+env:
+  REGISTRY: bankingappdev.azurecr.io
+  NAMESPACE: banking-app
+  OPENSHIFT_OVERLAY: k8s/overlays/openshift-dev
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment: openshift-dev
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set image tag
+        run: echo "IMAGE_TAG=${GITHUB_SHA}" >> $GITHUB_ENV
+
+      - name: Install OpenShift CLI
+        uses: redhat-actions/oc-installer@v1
+
+      - name: Login to OpenShift
+        run: oc login "${{ secrets.OPENSHIFT_SERVER }}" --token="${{ secrets.OPENSHIFT_TOKEN }}"
+
+      - name: Login to registry
+        run: echo "${{ secrets.REGISTRY_PASSWORD }}" | docker login "$REGISTRY" -u "${{ secrets.REGISTRY_USERNAME }}" --password-stdin
+
+      - name: Build and push images
+        run: |
+          docker build -t $REGISTRY/api-service:$IMAGE_TAG ./api-service
+          docker build -t $REGISTRY/worker-service:$IMAGE_TAG ./worker-service
+          docker build -t $REGISTRY/ai-analyzer-service:$IMAGE_TAG ./ai-analyzer-service
+          docker build -t $REGISTRY/frontend-service:$IMAGE_TAG ./frontend
+          docker push $REGISTRY/api-service:$IMAGE_TAG
+          docker push $REGISTRY/worker-service:$IMAGE_TAG
+          docker push $REGISTRY/ai-analyzer-service:$IMAGE_TAG
+          docker push $REGISTRY/frontend-service:$IMAGE_TAG
+
+      - name: Apply OpenShift overlay
+        run: |
+          oc apply -f "$OPENSHIFT_OVERLAY/namespace.yaml"
+          oc apply -k "$OPENSHIFT_OVERLAY"
+          oc -n "$NAMESPACE" set image deployment/api-service api-service=$REGISTRY/api-service:$IMAGE_TAG
+          oc -n "$NAMESPACE" set image deployment/worker-service worker-service=$REGISTRY/worker-service:$IMAGE_TAG
+          oc -n "$NAMESPACE" set image deployment/ai-analyzer-service ai-analyzer-service=$REGISTRY/ai-analyzer-service:$IMAGE_TAG
+          oc -n "$NAMESPACE" set image deployment/frontend-service frontend-service=$REGISTRY/frontend-service:$IMAGE_TAG
+
+      - name: Wait for rollout
+        run: |
+          oc -n "$NAMESPACE" rollout status deployment/api-service --timeout=180s
+          oc -n "$NAMESPACE" rollout status deployment/worker-service --timeout=180s
+          oc -n "$NAMESPACE" rollout status deployment/ai-analyzer-service --timeout=180s
+          oc -n "$NAMESPACE" rollout status deployment/frontend-service --timeout=180s
+
+      - name: Check route health
+        run: |
+          API_HOST=$(oc -n "$NAMESPACE" get route api-route -o jsonpath='{.spec.host}')
+          curl --fail --retry 10 --retry-delay 15 --retry-all-errors "https://${API_HOST}/api/health"

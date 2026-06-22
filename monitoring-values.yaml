@@ -1,0 +1,21 @@
+alertmanager:
+  config:
+    global:
+      resolve_timeout: 5m
+    route:
+      receiver: "python-soar"
+      group_by:
+        - namespace
+      group_wait: 30s
+      group_interval: 5m
+      repeat_interval: 12h
+      routes:
+        - matchers:
+            - alertname = "Watchdog"
+          receiver: "null"
+    receivers:
+      - name: "null"
+      - name: "python-soar"
+        webhook_configs:
+          - url: "http://192.168.2.23:5001/alertmanager"
+            send_resolved: true

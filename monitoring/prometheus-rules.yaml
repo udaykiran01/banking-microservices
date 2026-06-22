@@ -1,0 +1,69 @@
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: banking-app-alerts
+  namespace: monitoring
+  labels:
+    release: monitoring
+spec:
+  groups:
+    - name: api.rules
+      rules:
+        - alert: ApiHighErrorRate
+          expr: |
+            (
+              sum(rate(http_requests_total{job=~".*api-service.*",status=~"5.."}[5m]))
+              /
+              sum(rate(http_requests_total{job=~".*api-service.*"}[5m]))
+            ) > 0.01
+          for: 5m
+          labels:
+            severity: critical
+            service: api-service
+          annotations:
+            summary: "API 5xx error rate is above 1%"
+            description: "api-service is returning too many server errors over the last 5 minutes."
+        - alert: ApiHighLatency
+          expr: |
+            histogram_quantile(
+              0.95,
+              sum(rate(http_request_duration_seconds_bucket{job=~".*api-service.*"}[5m])) by (le)
+            ) > 1
+          for: 5m
+          labels:
+            severity: warning
+            service: api-service
+          annotations:
+            summary: "API p95 latency is above 1 second"
+            description: "api-service p95 request latency has stayed above 1 second."
+    - name: kafka.rules
+      rules:
+        - alert: KafkaConsumerErrors
+          expr: increase(kafka_consumer_errors_total[5m]) > 0
+          for: 2m
+          labels:
+            severity: critical
+            service: worker-service
+          annotations:
+            summary: "Kafka consumer errors detected"
+            description: "worker-service is reporting Kafka consumer errors."
+        - alert: KafkaMessagesNotProcessing
+          expr: rate(kafka_messages_processed_total[10m]) == 0
+          for: 10m
+          labels:
+            severity: warning
+            service: worker-service
+          annotations:
+            summary: "Kafka messages are not being processed"
+            description: "No successful Kafka message processing has been observed for 10 minutes."
+    - name: pod.rules
+      rules:
+        - alert: BankingPodRestarting
+          expr: |
+            increase(kube_pod_container_status_restarts_total{namespace="banking-app"}[15m]) > 0
+          for: 5m
+          labels:
+            severity: warning
+          annotations:
+            summary: "Banking app pod restarted"
+            description: "A container in namespace banking-app restarted in the last 15 minutes."

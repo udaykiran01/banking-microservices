@@ -1,0 +1,32 @@
+apiVersion: route.openshift.io/v1
+kind: Route
+metadata:
+  annotations:
+    openshift.io/host.generated: "true"
+  creationTimestamp: "2026-06-04T03:44:07Z"
+  generation: 1
+  labels:
+    app: banking-api
+  name: banking-api
+  namespace: openshif-tbanking-ap-dev
+  resourceVersion: "5615304421"
+  uid: c3ef3213-d020-4f95-9656-d11d722a1dc9
+spec:
+  host: banking-api-openshif-tbanking-ap-dev.apps.rm2.thpm.p1.openshiftapps.com
+  port:
+    targetPort: 3000
+  to:
+    kind: Service
+    name: banking-api
+    weight: 100
+  wildcardPolicy: None
+status:
+  ingress:
+  - conditions:
+    - lastTransitionTime: "2026-06-04T03:44:07Z"
+      status: "True"
+      type: Admitted
+    host: banking-api-openshif-tbanking-ap-dev.apps.rm2.thpm.p1.openshiftapps.com
+    routerCanonicalHostname: router-default.apps.rm2.thpm.p1.openshiftapps.com
+    routerName: default
+    wildcardPolicy: None

@@ -1,0 +1,66 @@
+name: Security Scan
+
+on:
+  pull_request:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+
+jobs:
+  security-scan:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Build local images for Trivy
+        run: |
+          docker build -t banking/api-service:scan ./api-service
+          docker build -t banking/worker-service:scan ./worker-service
+          docker build -t banking/ai-analyzer-service:scan ./ai-analyzer-service
+          docker build -t banking/frontend-service:scan ./frontend
+
+      - name: Trivy api-service image scan
+        uses: aquasecurity/trivy-action@0.24.0
+        with:
+          image-ref: banking/api-service:scan
+          severity: CRITICAL,HIGH
+          exit-code: "1"
+
+      - name: Trivy worker-service image scan
+        uses: aquasecurity/trivy-action@0.24.0
+        with:
+          image-ref: banking/worker-service:scan
+          severity: CRITICAL,HIGH
+          exit-code: "1"
+
+      - name: Trivy ai-analyzer-service image scan
+        uses: aquasecurity/trivy-action@0.24.0
+        with:
+          image-ref: banking/ai-analyzer-service:scan
+          severity: CRITICAL,HIGH
+          exit-code: "1"
+
+      - name: Trivy frontend-service image scan
+        uses: aquasecurity/trivy-action@0.24.0
+        with:
+          image-ref: banking/frontend-service:scan
+          severity: CRITICAL,HIGH
+          exit-code: "1"
+
+      - name: Checkov Terraform scan
+        uses: bridgecrewio/checkov-action@v12
+        with:
+          directory: terraform-modules
+          framework: terraform
+          quiet: true
+
+      - name: kube-linter scan
+        uses: stackrox/kube-linter-action@v1
+        with:
+          directory: k8s/overlays/openshift-dev

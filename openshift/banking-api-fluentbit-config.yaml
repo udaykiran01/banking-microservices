@@ -1,0 +1,25 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: banking-api-fluentbit-config
+data:
+  fluent-bit.conf: |
+    [SERVICE]
+        Flush 5
+        Log_Level info
+
+    [INPUT]
+        Name tail
+        Path /app/logs/app.log
+        Tag banking-api
+        Read_from_Head true
+
+    [OUTPUT]
+        Name splunk
+        Match *
+        Host si-i-04008f45cec3298fd.prd-p-d0lkp.splunkcloud.com
+        Port 8088
+        TLS On
+        TLS.Verify Off
+        Splunk_Token ${SPLUNK_HEC_TOKEN}
+        Splunk_Send_Raw Off

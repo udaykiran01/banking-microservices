@@ -1,0 +1,11 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: banking-app-config
+  namespace: banking-app
+data:
+  API_BASE_URL: "http://api-service:3000"
+  KAFKA_BROKER: "my-cluster-kafka-bootstrap.kafka.svc:9092"
+  POLL_INTERVAL_MS: "5000"
+  METRICS_PORT: "4000"
+  PORT: "5000"

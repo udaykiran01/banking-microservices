@@ -23,3 +23,16 @@ spec:
           annotations:
             summary: "API error rate is above 1%"
             description: "api-service is violating the 99% availability SLO."
+        - alert: ApiHighLatency
+          expr: |
+            histogram_quantile(
+              0.95,
+              sum(rate(http_request_duration_seconds_bucket{job="api-service"}[5m])) by (le)
+            ) > 1
+          for: 5m
+          labels:
+            severity: warning
+            service: api-service
+          annotations:
+            summary: "API p95 latency is above 1 second"
+            description: "api-service request latency is above the latency SLO."

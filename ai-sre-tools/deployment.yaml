@@ -1,0 +1,21 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ai-sre-tools
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: ai-sre-tools
+  template:
+    metadata:
+      labels:
+        app: ai-sre-tools
+    spec:
+      serviceAccountName: ai-sre-tools
+      containers:
+      - name: ai-sre-tools
+        image: image-registry.openshift-image-registry.svc:5000/openshif-tbanking-ap-dev/ai-sre-tools:latest
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 8080

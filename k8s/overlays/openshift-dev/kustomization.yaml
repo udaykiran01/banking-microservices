@@ -1,0 +1,17 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - namespace.yaml
+  - configmap.yaml
+  - secret-template.yaml
+  - frontend-deployment.yaml
+  - api-deployment.yaml
+  - worker-deployment.yaml
+  - ai-analyzer-deployment.yaml
+  - frontend-service.yaml
+  - api-service.yaml
+  - worker-service.yaml
+  - ai-analyzer-service.yaml
+  - frontend-route.yaml
+  - api-route.yaml
+  - servicemonitors.yaml

@@ -2,47 +2,70 @@ const express = require("express");
 const axios = require("axios");
 const { Kafka } = require("kafkajs");
 const client = require("prom-client");
+const fs = require("fs");
 
-const API_BASE_URL = process.env.API_BASE_URL || "http://api-service:3000";
-const KAFKA_BROKER =
-  process.env.KAFKA_BROKER || "my-cluster-kafka-bootstrap.kafka.svc:9092";
+const logPath = "/app/logs/worker.log";
+
+function appLog(level, message, data = {}) {
+  const log = {
+    timestamp: new Date().toISOString(),
+    level,
+    service: "worker-service",
+    message,
+    ...data,
+  };
+
+  console.log(JSON.stringify(log));
+
+  try {
+    fs.appendFileSync(logPath, JSON.stringify(log) + "\n");
+  } catch (err) {
+    console.error("Failed to write app log", err.message);
+  }
+}
+
+const API_BASE_URL = process.env.API_BASE_URL || "http://banking-api";
+const KAFKA_BROKER = process.env.KAFKA_BROKER || "kafka:9092";
 const METRICS_PORT = process.env.METRICS_PORT || 4000;
+const FRAUD_SERVICE_URL =
+  process.env.FRAUD_SERVICE_URL || "http://fraud-service:8000/predict";
 
 const app = express();
 
-// ADDED: Prometheus setup for worker-service
 const register = new client.Registry();
 client.collectDefaultMetrics({ register });
 
-// ADDED: Tracks successfully processed Kafka messages
 const kafkaMessagesProcessed = new client.Counter({
   name: "kafka_messages_processed_total",
   help: "Total Kafka messages processed",
   labelNames: ["topic", "status"],
 });
 
-// ADDED: Tracks Kafka processing failures
 const kafkaProcessingErrors = new client.Counter({
-  name: "kafka_processing_errors_total",
-  help: "Total Kafka processing errors",
+  name: "kafka_consumer_errors_total",
+  help: "Total Kafka consumer errors",
   labelNames: ["topic", "error_type"],
 });
 
 register.registerMetric(kafkaMessagesProcessed);
 register.registerMetric(kafkaProcessingErrors);
 
-// ADDED: Worker metrics endpoint for Prometheus
+app.get("/health", (req, res) => {
+  res.json({
+    status: "UP",
+    service: "worker-service",
+  });
+});
+
 app.get("/metrics", async (req, res) => {
   res.set("Content-Type", register.contentType);
   res.end(await register.metrics());
 });
 
-app.get("/health", (req, res) => {
-  res.json({ status: "UP", service: "worker-service" });
-});
-
 app.listen(METRICS_PORT, () => {
-  console.log(`Worker metrics running on port ${METRICS_PORT}`);
+  appLog("INFO", "Worker metrics server started", {
+    port: METRICS_PORT,
+  });
 });
 
 const kafka = new Kafka({
@@ -52,47 +75,96 @@ const kafka = new Kafka({
 
 const consumer = kafka.consumer({ groupId: "transaction-workers" });
 
+function buildFraudPayload(job) {
+  return {
+    amount: Number(job.amount || 0),
+    account_age_days: Number(job.account_age_days || 30),
+    transaction_count_24h: Number(job.transaction_count_24h || 1),
+    avg_transaction_amount: Number(
+      job.avg_transaction_amount || job.amount || 0
+    ),
+  };
+}
+
 async function startConsumer() {
   await consumer.connect();
-  console.log("Kafka consumer connected");
 
-  await consumer.subscribe({ topic: "transactions", fromBeginning: true });
-  console.log("Subscribed to Kafka topic: transactions");
+  appLog("INFO", "Kafka consumer connected", {
+    broker: KAFKA_BROKER,
+  });
+
+  await consumer.subscribe({
+    topic: "transactions",
+    fromBeginning: false,
+  });
+
+  appLog("INFO", "Subscribed to Kafka topic", {
+    topic: "transactions",
+  });
 
   await consumer.run({
     eachMessage: async ({ topic, partition, message }) => {
+      let job;
+
       try {
-        const job = JSON.parse(message.value.toString());
+        job = JSON.parse(message.value.toString());
 
-        console.log(`Processing transaction ${job.id} for ${job.customer_name}...`);
+        appLog("INFO", "Message consumed", {
+          topic,
+          partition,
+          transactionId: job.id,
+          customerName: job.customer_name,
+          amount: job.amount,
+        });
 
-        // UPDATED: fixed wrong endpoint
-        // OLD: /jobs/:id/process
-        // NEW: /transactions/:id/process
-        const response = await axios.put(
-          `${API_BASE_URL}/transactions/${job.id}/process`
+        const fraudPayload = buildFraudPayload(job);
+
+        appLog("INFO", "Calling fraud service", {
+          transactionId: job.id,
+          fraudServiceUrl: FRAUD_SERVICE_URL,
+        });
+
+        const fraudResponse = await axios.post(
+          FRAUD_SERVICE_URL,
+          fraudPayload,
+          { timeout: 5000 }
         );
 
-        // ADDED: success metric
+        appLog("INFO", "Fraud service response received", {
+          transactionId: job.id,
+          fraud: fraudResponse.data.fraud,
+          fraudProbability: fraudResponse.data.fraud_probability,
+        });
+
+        const response = await axios.put(
+          `${API_BASE_URL}/transactions/${job.id}/process`,
+          {
+            fraud: fraudResponse.data.fraud,
+            fraud_probability: fraudResponse.data.fraud_probability,
+          }
+        );
+
         kafkaMessagesProcessed.inc({
           topic,
-          status: "success",
+          status: fraudResponse.data.fraud ? "fraud_detected" : "success",
         });
 
-        console.log(`Processed transaction ${job.id}: ${response.data.message}`);
+        appLog("INFO", "Transaction processed successfully", {
+          transactionId: job.id,
+          message: response.data.message,
+        });
       } catch (error) {
-        // ADDED: error metric
         kafkaProcessingErrors.inc({
           topic,
-          error_type: "api_update_failed",
+          error_type: "fraud_or_api_update_failed",
         });
 
-        console.error("Failed to process Kafka message:", error.message);
-
-        if (error.response) {
-          console.error("Status:", error.response.status);
-          console.error("Response:", error.response.data);
-        }
+        appLog("ERROR", "Failed to process Kafka message", {
+          transactionId: job?.id || null,
+          error: error.message,
+          status: error.response?.status || null,
+          response: error.response?.data || null,
+        });
       }
     },
   });
@@ -104,5 +176,7 @@ startConsumer().catch((error) => {
     error_type: "consumer_startup_failed",
   });
 
-  console.error("Kafka consumer failed:", error.message);
+  appLog("ERROR", "Kafka consumer startup failed", {
+    error: error.message,
+  });
 });

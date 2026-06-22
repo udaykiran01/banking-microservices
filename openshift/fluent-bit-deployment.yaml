@@ -1,0 +1,30 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: fluent-bit-splunk
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: fluent-bit-splunk
+  template:
+    metadata:
+      labels:
+        app: fluent-bit-splunk
+    spec:
+      containers:
+        - name: fluent-bit
+          image: fluent/fluent-bit:latest
+          env:
+            - name: SPLUNK_HEC_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: splunk-hec
+                  key: token
+          volumeMounts:
+            - name: config
+              mountPath: /fluent-bit/etc/
+      volumes:
+        - name: config
+          configMap:
+            name: fluent-bit-config

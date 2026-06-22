@@ -1,0 +1,36 @@
+apiVersion: image.openshift.io/v1
+kind: ImageStream
+metadata:
+  creationTimestamp: "2026-06-04T03:34:19Z"
+  generation: 1
+  name: api-service
+  namespace: openshif-tbanking-ap-dev
+  resourceVersion: "5615295368"
+  uid: 7e9ad6d0-9ab4-449b-8501-e7492c40967a
+spec:
+  lookupPolicy:
+    local: false
+status:
+  dockerImageRepository: image-registry.openshift-image-registry.svc:5000/openshif-tbanking-ap-dev/api-service
+  publicDockerImageRepository: default-route-openshift-image-registry.apps.rm2.thpm.p1.openshiftapps.com/openshif-tbanking-ap-dev/api-service
+  tags:
+  - items:
+    - created: "2026-06-04T03:34:20Z"
+      dockerImageReference: image-registry.openshift-image-registry.svc:5000/openshif-tbanking-ap-dev/api-service@sha256:7b5e428abff2ebda8a588c60f09c6bbea07f1c1b7c5d54fdde607ff88f4f1903
+      generation: 1
+      image: sha256:7b5e428abff2ebda8a588c60f09c6bbea07f1c1b7c5d54fdde607ff88f4f1903
+    - created: "2026-06-04T03:34:19Z"
+      dockerImageReference: image-registry.openshift-image-registry.svc:5000/openshif-tbanking-ap-dev/api-service@sha256:2f1f505b509b99bb65dc432ad13c4987927ff112335be1c865d1d725a90c40cb
+      generation: 1
+      image: sha256:2f1f505b509b99bb65dc432ad13c4987927ff112335be1c865d1d725a90c40cb
+    - created: "2026-06-04T03:34:19Z"
+      dockerImageReference: image-registry.openshift-image-registry.svc:5000/openshif-tbanking-ap-dev/api-service@sha256:a5c71ed8bf6a1fbf65f7d0313f6f8cc1d85f13cf69a3f1437d4485698d8bd4d6
+      generation: 1
+      image: sha256:a5c71ed8bf6a1fbf65f7d0313f6f8cc1d85f13cf69a3f1437d4485698d8bd4d6
+    tag: metrics-v1
+  - items:
+    - created: "2026-06-04T03:41:17Z"
+      dockerImageReference: image-registry.openshift-image-registry.svc:5000/openshif-tbanking-ap-dev/api-service@sha256:fb3abcba40f788df211035fd3acef9ad4c05074e325c7ad4d86927ad98373da9
+      generation: 1
+      image: sha256:fb3abcba40f788df211035fd3acef9ad4c05074e325c7ad4d86927ad98373da9
+    tag: openshift-amd64

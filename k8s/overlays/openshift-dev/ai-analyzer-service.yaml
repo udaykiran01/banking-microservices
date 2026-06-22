@@ -1,0 +1,14 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: ai-analyzer-service
+  namespace: banking-app
+  labels:
+    app: ai-analyzer-service
+spec:
+  selector:
+    app: ai-analyzer-service
+  ports:
+    - name: http
+      port: 5000
+      targetPort: http

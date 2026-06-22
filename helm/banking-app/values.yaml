@@ -20,6 +20,10 @@ workerService:
     tag: v4
     pullPolicy: IfNotPresent
   pollIntervalMs: "5000"
+  metricsPort: 4000
+  service:
+    type: ClusterIP
+    port: 4000
 
 
 aiAnalyzerService:
@@ -54,4 +58,4 @@ frontendService:
     type: ClusterIP
     port: 80
 
-  containerPort: 80    
+  containerPort: 8080

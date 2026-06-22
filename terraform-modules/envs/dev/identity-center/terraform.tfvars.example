@@ -1,0 +1,16 @@
+    aws_region      = "us-east-1"
+    aws_account_id  = "123456789012"
+    entra_tenant_id = "00000000-0000-0000-0000-000000000000"
+    eks_cluster_name = "banking-dev-eks"
+
+entra_synced_group_display_name               = "AWS-DevOps-Team"
+aws_identity_center_enterprise_app_display_name = "AWS IAM Identity Center"
+
+kubernetes_namespace   = "banking-app"
+devops_kubernetes_group = "banking-devops"
+
+# Start in report-only mode, validate sign-in impact, then change to "enabled".
+conditional_access_state = "enabledForReportingButNotEnforced"
+
+# Add break-glass Entra user object IDs here.
+conditional_access_excluded_users = []

@@ -1,12 +1,28 @@
+require("dd-trace").init({
+  service: "banking-api",
+  env: process.env.DD_ENV || "dev",
+  version: process.env.DD_VERSION || "1.0.0",
+  logInjection: true,
+  runtimeMetrics: true
+});
+
 const express = require("express");
 const { Pool } = require("pg");
 const { Kafka } = require("kafkajs");
 const client = require("prom-client");
-
+const cors = require("cors");
 const app = express();
+const logger = require("./logger");
+app.use(cors());
 const PORT = process.env.PORT || 3000;
 
 app.use(express.json());
+
+logger.info({
+  event: "api_started",
+  service: "banking-api",
+  timestamp: new Date().toISOString()
+});
 
 // Prometheus metrics
 const register = new client.Registry();
@@ -47,6 +63,10 @@ const appErrorCounter = new client.Counter({
   labelNames: ["route", "component"],
 });
 
+
+
+
+
 register.registerMetric(appErrorCounter);
 
 // UPDATED: Tracks both request count and request duration
@@ -73,9 +93,10 @@ const pool = new Pool({
   user: process.env.DB_USER,
   password: process.env.DB_PASSWORD,
   database: process.env.DB_NAME,
-  ssl: {
-    rejectUnauthorized: false,
-  },
+  ssl:
+    process.env.DB_SSL === "true"
+      ? { rejectUnauthorized: false }
+      : false,
 });
 
 const kafka = new Kafka({
@@ -86,9 +107,11 @@ const kafka = new Kafka({
 });
 
 const producer = kafka.producer();
+let kafkaProducerReady = false;
 
 async function startProducer() {
   await producer.connect();
+  kafkaProducerReady = true;
   console.log("Kafka producer connected");
 }
 
@@ -102,29 +125,80 @@ startProducer().catch((err) => {
   console.error("Failed to connect Kafka producer:", err.message);
 });
 
-app.get("/health", async (req, res) => {
+function alive(req, res) {
+  res.status(200).json({
+    status: "UP",
+    service: "api-service",
+  });
+}
+
+async function checkKafka() {
+  if (!kafkaProducerReady) {
+    throw new Error("Kafka producer is not connected");
+  }
+
+  const admin = kafka.admin();
+  await admin.connect();
+  try {
+    await admin.listTopics();
+  } finally {
+    await admin.disconnect();
+  }
+}
+
+async function ready(req, res) {
+  const checks = {
+    database: "UNKNOWN",
+    kafka: "UNKNOWN",
+  };
+
   try {
     await pool.query("SELECT 1");
-    res.status(200).json({
-      status: "UP",
-      service: "api-service",
-      database: "CONNECTED",
-    });
+    checks.database = "CONNECTED";
   } catch (error) {
-    // ADDED: Track database health check failure
+    checks.database = "DISCONNECTED";
     appErrorCounter.inc({
-      route: "/health",
+      route: req.path,
       component: "database",
     });
 
-    res.status(500).json({
+    return res.status(503).json({
       status: "DOWN",
       service: "api-service",
-      database: "DISCONNECTED",
+      checks,
       error: error.message,
     });
   }
-});
+
+  try {
+    await checkKafka();
+    checks.kafka = "CONNECTED";
+  } catch (error) {
+    checks.kafka = "DISCONNECTED";
+    appErrorCounter.inc({
+      route: req.path,
+      component: "kafka",
+    });
+
+    return res.status(503).json({
+      status: "DOWN",
+      service: "api-service",
+      checks,
+      error: error.message,
+    });
+  }
+
+  return res.status(200).json({
+    status: "UP",
+    service: "api-service",
+    checks,
+  });
+}
+
+app.get("/health", alive);
+app.get("/api/health", alive);
+app.get("/ready", ready);
+app.get("/api/ready", ready);
 
 app.get("/metrics", async (req, res) => {
   try {
@@ -190,12 +264,30 @@ app.post("/transactions", async (req, res) => {
       status: transaction.status,
     });
 
+    logger.info({
+  event: "transaction_created",
+  service: "banking-api",
+  transaction_id: transaction.id,
+  customer_name: transaction.customer_name,
+  amount: transaction.amount,
+  transaction_type: transaction.type,
+  status: transaction.status,
+  timestamp: new Date().toISOString()
+});
+
     return res.status(201).json({
       message: "Transaction created successfully",
       transaction,
     });
   } catch (error) {
     // ADDED: Track transaction creation failure
+
+    logger.error({
+  event: "transaction_create_failed",
+  service: "banking-api",
+  error: error.message,
+  timestamp: new Date().toISOString()
+});
     appErrorCounter.inc({
       route: "/transactions",
       component: "api-db-kafka",
@@ -211,33 +303,32 @@ app.post("/transactions", async (req, res) => {
 app.put("/transactions/:id/process", async (req, res) => {
   try {
     const { id } = req.params;
+    const { fraud, fraud_probability } = req.body;
+
+    const fraudScore = fraud_probability;
+    const fraudStatus = fraud ? "FRAUD" : "CLEAR";
+    const status = fraud ? "FLAGGED" : "PROCESSED";
 
     const result = await pool.query(
       `
       UPDATE transactions
-      SET status = 'PROCESSED',
-          processed_at = NOW()
-      WHERE id = $1
-      RETURNING id, customer_name, amount, type, status, created_at, processed_at
+      SET status = $1,
+          processed_at = NOW(),
+          fraud_score = $2,
+          fraud_status = $3
+      WHERE id = $4
+      RETURNING *
       `,
-      [id]
+      [status, fraudScore, fraudStatus, id]
     );
-
-    if (result.rows.length === 0) {
-      return res.status(404).json({
-        error: "Transaction not found",
-      });
-    }
 
     res.json({
       message: "Transaction processed successfully",
       transaction: result.rows[0],
     });
   } catch (error) {
-    res.status(500).json({
-      error: "Failed to process transaction",
-      details: error.message,
-    });
+    console.error(error);
+    res.status(500).json({ error: error.message });
   }
 });
 

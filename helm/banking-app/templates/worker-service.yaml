@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ .Values.workerService.name }}
+  labels:
+    app: {{ .Values.workerService.name }}
+spec:
+  type: {{ .Values.workerService.service.type }}
+  selector:
+    app: {{ .Values.workerService.name }}
+  ports:
+    - name: metrics
+      protocol: TCP
+      port: {{ .Values.workerService.service.port }}
+      targetPort: metrics

@@ -1,0 +1,11 @@
+apiVersion: security.istio.io/v1beta1
+kind: PeerAuthentication
+metadata:
+  name: critical-services-strict-mtls
+  namespace: banking-app
+spec:
+  selector:
+    matchLabels:
+      mesh-scope: critical
+  mtls:
+    mode: STRICT

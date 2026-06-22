@@ -1,0 +1,52 @@
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: ai-sre-tools
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: ai-sre-tools-reader
+rules:
+- apiGroups: [""]
+  resources:
+  - pods
+  - services
+  - endpoints
+  - events
+  verbs:
+  - get
+  - list
+  - watch
+
+- apiGroups: ["apps"]
+  resources:
+  - deployments
+  - replicasets
+  - statefulsets
+  verbs:
+  - get
+  - list
+  - watch
+
+- apiGroups: ["route.openshift.io"]
+  resources:
+  - routes
+  verbs:
+  - get
+  - list
+  - watch
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: ai-sre-tools-reader-binding
+subjects:
+- kind: ServiceAccount
+  name: ai-sre-tools
+roleRef:
+  kind: Role
+  name: ai-sre-tools-reader
+  apiGroup: rbac.authorization.k8s.io
