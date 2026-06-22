@@ -38,14 +38,14 @@ jobs:
         run: terraform fmt -check -recursive
         working-directory: openshift-azure-terraform
 
-      - name: Terragrunt Init
-        run: terragrunt init
+      - name: Terragrunt Init All
+        run: terragrunt run-all init --non-interactive
 
-      - name: Terragrunt Validate
-        run: terragrunt validate
+      - name: Terragrunt Validate All
+        run: terragrunt run-all validate --non-interactive
 
-      - name: Terragrunt Plan
-        run: terragrunt plan -out=tfplan
+      - name: Terragrunt Plan All
+        run: terragrunt run-all plan --non-interactive
 
       - name: Upload Terraform Plan Evidence
         uses: actions/upload-artifact@v4
