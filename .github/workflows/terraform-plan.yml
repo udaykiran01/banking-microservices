@@ -23,7 +23,16 @@ jobs:
 
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
-        #test
+
+      - name: Install Terragrunt
+        run: |
+          TG_VERSION=0.82.3
+          wget -O terragrunt https://github.com/gruntwork-io/terragrunt/releases/download/v${TG_VERSION}/terragrunt_linux_amd64
+          chmod +x terragrunt
+          sudo mv terragrunt /usr/local/bin/
+
+      - name: Verify Terragrunt
+        run: terragrunt --version
 
       - name: Terraform Format Check
         run: terraform fmt -check -recursive
