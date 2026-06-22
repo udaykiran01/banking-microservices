@@ -8,6 +8,10 @@ on:
       - "fraud-service/**"
       - ".github/workflows/**"
 
+permissions:
+  contents: read
+  pull-requests: read      
+
 jobs:
   ci-security:
     runs-on: ubuntu-latest
@@ -15,9 +19,13 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Gitleaks Secret Scan
         uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Trivy Filesystem Scan
         uses: aquasecurity/trivy-action@master

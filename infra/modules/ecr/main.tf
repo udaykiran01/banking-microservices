@@ -1,6 +1,6 @@
 module "ecr" {
-  for_each = toset(var.repository_names)
-  source = "terraform-aws-modules/ecr/aws"
+  for_each        = toset(var.repository_names)
+  source          = "terraform-aws-modules/ecr/aws"
   repository_name = each.value
 
   repository_image_tag_mutability = "IMMUTABLE"

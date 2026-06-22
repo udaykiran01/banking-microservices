@@ -1,6 +1,6 @@
-variable "kubernetes_cluster_name"{
-    description = "cluster name"
-    type = string
+variable "kubernetes_cluster_name" {
+  description = "cluster name"
+  type        = string
 }
 
 variable "resource_group_name" {

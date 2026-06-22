@@ -1,15 +1,34 @@
+# Secrets
+*.key
+*.pem
+*.crt
+*.pfx
+*.jks
+
+# Environment files
+.env
+.env.*
+
 # Terraform
 .terraform/
 *.tfstate
-*.tfstate.backup
-crash.log
+*.tfstate.*
+terraform.tfvars
 
-# Sensitive / overrides
-*.tfvars
-*.tfvars.json
+# Terragrunt
+.terragrunt-cache/
 
-# Lock file (optional — include if you want version pinning)
-# .terraform.lock.hcl
+# Node
+node_modules/
 
-# OS / editor
+# Python
+venv/
+__pycache__/
+*.pyc
+
+# IDE
+.vscode/
+.idea/
+
+# OS
 .DS_Store

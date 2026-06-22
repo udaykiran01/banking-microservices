@@ -24,7 +24,7 @@ dependency "private_dns" {
 
 inputs = {
   resource_group_name = dependency.resource_group.outputs.resource_group_name
-  location            = local.env.locals.location
+  location            = "canadacentral"
 
   postgres_server_name = "psql-banking-openshift-${local.env.locals.environment}"
   database_name        = "bankingdbdev"

@@ -1,29 +1,33 @@
-name: Terraform Plan
+name: Terraform Apply
 
 on:
-  push:
-    branches:
-      - main
-      - test-terraform-pipeline
-    paths:
-      - "openshift-azure-terraform/**"
-      - ".github/workflows/terraform-plan.yml"
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: "Environment to apply"
+        required: true
+        default: "dev"
+        type: choice
+        options:
+          - dev
 
 permissions:
   contents: read
   id-token: write
 
 jobs:
-  terraform-plan:
+  terraform-apply:
     runs-on: ubuntu-latest
+    environment: dev
 
     defaults:
       run:
-        working-directory: openshift-azure-terraform/infra/live/dev
+        working-directory: openshift-azure-terraform/infra/live/${{ inputs.environment }}
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+        #code checkout
 
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
@@ -42,24 +46,8 @@ jobs:
           chmod +x terragrunt
           sudo mv terragrunt /usr/local/bin/
 
-      - name: Verify Terragrunt
-        run: terragrunt --version
-
-      - name: Terraform Format Check
-        run: terraform fmt -check -recursive
-        working-directory: openshift-azure-terraform
-
-      - name: Terragrunt Init All
-        run: terragrunt run-all init --non-interactive
-
-      - name: Terragrunt Validate All
-        run: terragrunt run-all validate --non-interactive
-
       - name: Terragrunt Plan All
         run: terragrunt run-all plan --non-interactive
 
-      - name: Upload Terraform Plan Evidence
-        uses: actions/upload-artifact@v4
-        with:
-          name: terraform-plan-evidence
-          path: openshift-azure-terraform/infra/live/dev
+      - name: Terragrunt Apply All
+        run: terragrunt run-all apply --non-interactive -auto-approve

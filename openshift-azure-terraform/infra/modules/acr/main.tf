@@ -1,8 +1,8 @@
 resource "azurerm_container_registry" "this" {
   name                = var.container_registry_name
   resource_group_name = var.resource_group_name
-  #hello mastaru
-  location            = var.location
-  sku                 = "Basic"
-  admin_enabled       = false
+  #pipeline testing 2
+  location      = var.location
+  sku           = "Basic"
+  admin_enabled = false
 }
