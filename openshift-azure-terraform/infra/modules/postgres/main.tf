@@ -10,7 +10,17 @@ resource "azurerm_postgresql_flexible_server" "this" {
 
   storage_mb = 32768
   version    = "16"
+
+  lifecycle {
+    ignore_changes = [
+      zone
+    ]
+
+  }
+
 }
+
+
 
 resource "azurerm_postgresql_flexible_server_database" "this" {
   name      = var.database_name
