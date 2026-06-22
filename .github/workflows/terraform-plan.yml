@@ -1,45 +1,41 @@
 name: Terraform Plan
 
 on:
-pull_request:
-paths:
-- "openshift-azure-terraform/**"
-- ".github/workflows/terraform-plan.yml"
+  pull_request:
+    paths:
+      - "openshift-azure-terraform/**"
+      - ".github/workflows/terraform-plan.yml"
 
 jobs:
-terraform-plan:
-runs-on: ubuntu-latest
+  terraform-plan:
+    runs-on: ubuntu-latest
 
-```
-defaults:
-  run:
-    working-directory: openshift-azure-terraform/infra/live/dev
+    defaults:
+      run:
+        working-directory: openshift-azure-terraform/infra/live/dev
 
-steps:
-  - name: Checkout code
-    uses: actions/checkout@v4
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-  - name: Setup Terraform
-    uses: hashicorp/setup-terraform@v3
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
 
-  - name: Setup Terragrunt
-    uses: gruntwork-io/terragrunt-action@v2
-    with:
-      terragrunt-version: latest
+      - name: Terraform Format Check
+        run: terraform fmt -check -recursive
+        working-directory: openshift-azure-terraform
 
-  - name: Terraform Format Check
-    run: terraform fmt -check -recursive
-    working-directory: openshift-azure-terraform
+      - name: Terragrunt Init
+        run: terragrunt init
 
-  - name: Terragrunt Validate
-    run: terragrunt validate
+      - name: Terragrunt Validate
+        run: terragrunt validate
 
-  - name: Terragrunt Plan
-    run: terragrunt plan -out=tfplan
+      - name: Terragrunt Plan
+        run: terragrunt plan -out=tfplan
 
-  - name: Upload Terraform Plan Evidence
-    uses: actions/upload-artifact@v4
-    with:
-      name: terraform-plan-evidence
-      path: openshift-azure-terraform/infra/live/dev/tfplan
-```
+      - name: Upload Terraform Plan Evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: terraform-plan-evidence
+          path: openshift-azure-terraform/infra/live/dev/tfplan
