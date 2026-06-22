@@ -11,6 +11,6 @@ variable "location" {
 
 variable "key_vault_name" {
   description = "region name"
-  type        = string 
+  type        = string
 
 }

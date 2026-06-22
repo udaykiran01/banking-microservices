@@ -11,7 +11,7 @@ resource "azurerm_role_assignment" "aks_acr_pull" {
 }
 
 resource "azurerm_kubernetes_cluster" "this" {
-  name               = var.kubernetes_cluster_name
+  name                = var.kubernetes_cluster_name
   location            = var.location
   resource_group_name = var.resource_group_name
   dns_prefix          = var.dns_prefix
