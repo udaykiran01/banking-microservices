@@ -1,0 +1,14 @@
+trigger:
+- main
+
+pool:
+  vmImage: ubuntu-latest
+
+steps:
+- checkout: self
+
+- script: |
+    echo "Azure DevOps pipeline connected to GitHub successfully"
+    pwd
+    ls -la
+  displayName: "Test pipeline"
