@@ -21,7 +21,7 @@ permissions:
 env:
   ACR_NAME: acrbankingdev001
   AKS_RESOURCE_GROUP: rg-banking-dev
-  AKS_CLUSTER_NAME: aks-banking-dev
+  AKS_CLUSTER_NAME: banking-openshift-dev
   NAMESPACE: banking-dev
 
 jobs:
