@@ -1,14 +1,22 @@
 trigger:
 - main
 
+variables:
+  imageTag: $(Build.BuildId)
+
 pool:
   vmImage: ubuntu-latest
 
 steps:
 - checkout: self
 
-- script: |
-    echo "Azure DevOps pipeline connected to GitHub successfully"
-    pwd
-    ls -la
-  displayName: "Test pipeline"
+- task: Docker@2
+  displayName: Build and Push banking-api
+  inputs:
+    command: buildAndPush
+    repository: banking-api
+    dockerfile: banking-api/Dockerfile
+    containerRegistry: ACR-Service-Connection
+    tags: |
+      $(imageTag)
+      latest
