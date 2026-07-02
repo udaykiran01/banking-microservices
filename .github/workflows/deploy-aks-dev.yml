@@ -37,12 +37,30 @@ jobs:
       - name: Login to ACR
         run: az acr login --name $ACR_NAME
 
-      - name: Build and Push API Image
+
+      - name: Install Syft
+        run: |
+          curl -sSfL https://raw.githubusercontent.com/anchore/syft/main/install.sh | sh -s -- -b /usr/local/bin
+          syft version
+
+      - name: Create SBOM directory
+        run: mkdir -p sbom  
+
+      - name: Build API Image
         run: |
           docker build \
             -t $ACR_NAME.azurecr.io/banking-api:${{ github.sha }} \
             -t $ACR_NAME.azurecr.io/banking-api:dev \
             ./api-service
+
+      - name: Generate API SBOM
+        run: |
+          syft $ACR_NAME.azurecr.io/banking-api:${{ github.sha }} \
+            -o cyclonedx-json \
+            > sbom/banking-api-sbom.json
+
+      - name: Push API Image
+        run: |
           docker push $ACR_NAME.azurecr.io/banking-api:${{ github.sha }}
           docker push $ACR_NAME.azurecr.io/banking-api:dev
 
@@ -123,8 +141,17 @@ jobs:
           kubectl rollout status deployment/fraud-dashboard -n $NAMESPACE
           kubectl rollout status deployment/frontend-service -n $NAMESPACE
 
+
+      - name: Upload API SBOM
+        uses: actions/upload-artifact@v4
+        with:
+          name: banking-api-sbom
+          path: sbom/banking-api-sbom.json      
+
       - name: Upload Deployment Evidence
         uses: actions/upload-artifact@v4
         with:
           name: aks-deployment-evidence
           path: openshift-azure-terraform/helm-charts/banking-app/
+
+       
