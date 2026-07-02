@@ -19,7 +19,7 @@ permissions:
   contents: read
 
 env:
-  ACR_NAME: bankingacrdev
+  ACR_NAME: acrbankingdev001
   AKS_RESOURCE_GROUP: rg-banking-dev
   AKS_CLUSTER_NAME: aks-banking-dev
   NAMESPACE: banking-dev
