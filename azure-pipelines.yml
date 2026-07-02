@@ -14,8 +14,8 @@ steps:
   displayName: Build and Push banking-api
   inputs:
     command: buildAndPush
-    repository: banking-api
-    dockerfile: banking-api/Dockerfile
+    repository: api-service
+    dockerfile: api-service/Dockerfile
     containerRegistry: ACR-Service-Connection
     tags: |
       $(imageTag)
