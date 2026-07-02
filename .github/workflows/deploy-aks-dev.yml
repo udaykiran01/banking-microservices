@@ -14,6 +14,10 @@ on:
       - "openshift-azure-terraform/helm-charts/banking-app/**"
       - ".github/workflows/deploy-aks-dev.yml"
 
+permissions:
+  id-token: write
+  contents: read
+
 env:
   ACR_NAME: bankingacrdev
   AKS_RESOURCE_GROUP: rg-banking-dev
@@ -29,14 +33,15 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Azure Login
+      - name: Azure Login using OIDC
         uses: azure/login@v2
         with:
-          creds: ${{ secrets.AZURE_CREDENTIALS }}
+          client-id: ${{ vars.AZURE_CLIENT_ID }}
+          tenant-id: ${{ vars.AZURE_TENANT_ID }}
+          subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
 
       - name: Login to ACR
         run: az acr login --name $ACR_NAME
-
 
       - name: Install Syft
         run: |
@@ -44,7 +49,7 @@ jobs:
           syft version
 
       - name: Create SBOM directory
-        run: mkdir -p sbom  
+        run: mkdir -p sbom
 
       - name: Build API Image
         run: |
@@ -58,6 +63,11 @@ jobs:
           syft $ACR_NAME.azurecr.io/banking-api:${{ github.sha }} \
             -o cyclonedx-json \
             > sbom/banking-api-sbom.json
+
+      - name: Validate API SBOM
+        run: |
+          test -s sbom/banking-api-sbom.json
+          head -n 20 sbom/banking-api-sbom.json
 
       - name: Push API Image
         run: |
@@ -141,17 +151,14 @@ jobs:
           kubectl rollout status deployment/fraud-dashboard -n $NAMESPACE
           kubectl rollout status deployment/frontend-service -n $NAMESPACE
 
-
       - name: Upload API SBOM
         uses: actions/upload-artifact@v4
         with:
           name: banking-api-sbom
-          path: sbom/banking-api-sbom.json      
+          path: sbom/banking-api-sbom.json
 
       - name: Upload Deployment Evidence
         uses: actions/upload-artifact@v4
         with:
           name: aks-deployment-evidence
-          path: openshift-azure-terraform/helm-charts/banking-app/
-
-       
+          path: openshift-azure-terraform/helm-charts/banking-app
