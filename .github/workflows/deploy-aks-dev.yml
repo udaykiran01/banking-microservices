@@ -7,9 +7,11 @@ on:
     paths:
       - "api-service/**"
       - "worker-service/**"
+      - "ai-analyzer-service/**"
       - "fraud-service/**"
+      - "fraud-dashboard/**"
       - "frontend/**"
-      - "aks-platform/k8s/**"
+      - "openshift-azure-terraform/helm-charts/banking-app/**"
       - ".github/workflows/deploy-aks-dev.yml"
 
 env:
@@ -35,20 +37,77 @@ jobs:
       - name: Login to ACR
         run: az acr login --name $ACR_NAME
 
-      - name: Build and Push API Image
+
+      - name: Install Syft
         run: |
-          docker build -t $ACR_NAME.azurecr.io/banking-api:${{ github.sha }} ./api-service
+          curl -sSfL https://raw.githubusercontent.com/anchore/syft/main/install.sh | sh -s -- -b /usr/local/bin
+          syft version
+
+      - name: Create SBOM directory
+        run: mkdir -p sbom  
+
+      - name: Build API Image
+        run: |
+          docker build \
+            -t $ACR_NAME.azurecr.io/banking-api:${{ github.sha }} \
+            -t $ACR_NAME.azurecr.io/banking-api:dev \
+            ./api-service
+
+      - name: Generate API SBOM
+        run: |
+          syft $ACR_NAME.azurecr.io/banking-api:${{ github.sha }} \
+            -o cyclonedx-json \
+            > sbom/banking-api-sbom.json
+
+      - name: Push API Image
+        run: |
           docker push $ACR_NAME.azurecr.io/banking-api:${{ github.sha }}
+          docker push $ACR_NAME.azurecr.io/banking-api:dev
 
       - name: Build and Push Worker Image
         run: |
-          docker build -t $ACR_NAME.azurecr.io/worker-service:${{ github.sha }} ./worker-service
+          docker build \
+            -t $ACR_NAME.azurecr.io/worker-service:${{ github.sha }} \
+            -t $ACR_NAME.azurecr.io/worker-service:dev \
+            ./worker-service
           docker push $ACR_NAME.azurecr.io/worker-service:${{ github.sha }}
+          docker push $ACR_NAME.azurecr.io/worker-service:dev
+
+      - name: Build and Push AI Analyzer Image
+        run: |
+          docker build \
+            -t $ACR_NAME.azurecr.io/ai-analyzer-service:${{ github.sha }} \
+            -t $ACR_NAME.azurecr.io/ai-analyzer-service:dev \
+            ./ai-analyzer-service
+          docker push $ACR_NAME.azurecr.io/ai-analyzer-service:${{ github.sha }}
+          docker push $ACR_NAME.azurecr.io/ai-analyzer-service:dev
 
       - name: Build and Push Fraud Service Image
         run: |
-          docker build -t $ACR_NAME.azurecr.io/fraud-service:${{ github.sha }} ./fraud-service
+          docker build \
+            -t $ACR_NAME.azurecr.io/fraud-service:${{ github.sha }} \
+            -t $ACR_NAME.azurecr.io/fraud-service:dev \
+            ./fraud-service
           docker push $ACR_NAME.azurecr.io/fraud-service:${{ github.sha }}
+          docker push $ACR_NAME.azurecr.io/fraud-service:dev
+
+      - name: Build and Push Fraud Dashboard Image
+        run: |
+          docker build \
+            -t $ACR_NAME.azurecr.io/fraud-dashboard:${{ github.sha }} \
+            -t $ACR_NAME.azurecr.io/fraud-dashboard:dev \
+            ./fraud-dashboard
+          docker push $ACR_NAME.azurecr.io/fraud-dashboard:${{ github.sha }}
+          docker push $ACR_NAME.azurecr.io/fraud-dashboard:dev
+
+      - name: Build and Push Frontend Image
+        run: |
+          docker build \
+            -t $ACR_NAME.azurecr.io/frontend-service:${{ github.sha }} \
+            -t $ACR_NAME.azurecr.io/frontend-service:dev \
+            ./frontend
+          docker push $ACR_NAME.azurecr.io/frontend-service:${{ github.sha }}
+          docker push $ACR_NAME.azurecr.io/frontend-service:dev
 
       - name: Connect to AKS
         run: |
@@ -60,35 +119,39 @@ jobs:
       - name: Create Namespace
         run: kubectl create namespace $NAMESPACE --dry-run=client -o yaml | kubectl apply -f -
 
-      - name: Deploy Kubernetes Manifests
-        run: kubectl apply -f aks-platform/k8s/ -n $NAMESPACE
-
-      - name: Update API Image
+      - name: Deploy Helm Chart
         run: |
-          kubectl set image deployment/banking-api \
-            banking-api=$ACR_NAME.azurecr.io/banking-api:${{ github.sha }} \
-            -n $NAMESPACE
-
-      - name: Update Worker Image
-        run: |
-          kubectl set image deployment/worker-service \
-            worker-service=$ACR_NAME.azurecr.io/worker-service:${{ github.sha }} \
-            -n $NAMESPACE
-
-      - name: Update Fraud Service Image
-        run: |
-          kubectl set image deployment/fraud-service \
-            fraud-service=$ACR_NAME.azurecr.io/fraud-service:${{ github.sha }} \
-            -n $NAMESPACE
+          helm upgrade --install banking-app openshift-azure-terraform/helm-charts/banking-app \
+            --namespace $NAMESPACE \
+            --create-namespace \
+            -f openshift-azure-terraform/helm-charts/banking-app/values-dev.yaml \
+            --set apiService.image.tag=${{ github.sha }} \
+            --set workerService.image.tag=${{ github.sha }} \
+            --set aiAnalyzerService.image.tag=${{ github.sha }} \
+            --set fraudService.image.tag=${{ github.sha }} \
+            --set dashboardService.image.tag=${{ github.sha }} \
+            --set frontendService.image.tag=${{ github.sha }}
 
       - name: Verify Rollout
         run: |
-          kubectl rollout status deployment/banking-api -n $NAMESPACE
+          kubectl rollout status deployment/api-service -n $NAMESPACE
           kubectl rollout status deployment/worker-service -n $NAMESPACE
+          kubectl rollout status deployment/ai-analyzer-service -n $NAMESPACE
           kubectl rollout status deployment/fraud-service -n $NAMESPACE
+          kubectl rollout status deployment/fraud-dashboard -n $NAMESPACE
+          kubectl rollout status deployment/frontend-service -n $NAMESPACE
+
+
+      - name: Upload API SBOM
+        uses: actions/upload-artifact@v4
+        with:
+          name: banking-api-sbom
+          path: sbom/banking-api-sbom.json      
 
       - name: Upload Deployment Evidence
         uses: actions/upload-artifact@v4
         with:
           name: aks-deployment-evidence
-          path: aks-platform/
+          path: openshift-azure-terraform/helm-charts/banking-app/
+
+       

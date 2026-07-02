@@ -1,0 +1,208 @@
+namespaceOverride: ""
+
+global:
+  imagePullPolicy: IfNotPresent
+  kafkaBroker: my-cluster-kafka-bootstrap.kafka.svc:9092
+  mesh:
+    enabled: true
+    scope: critical
+
+imagePullSecrets: []
+
+config:
+  ddEnv: dev
+  ddVersion: "1.0.0"
+  dbSsl: "false"
+
+database:
+  existingSecret: postgres-secret-kv
+  keys:
+    host: DB_HOST
+    port: DB_PORT
+    user: DB_USER
+    password: DB_PASSWORD
+    name: DB_NAME
+
+azureOpenAI:
+  existingSecret: azure-openai-secret
+  keys:
+    endpoint: AZURE_OPENAI_ENDPOINT
+    key: AZURE_OPENAI_KEY
+    deployment: AZURE_OPENAI_DEPLOYMENT
+
+secrets:
+  create: false
+  database:
+    DB_HOST: ""
+    DB_PORT: "5432"
+    DB_USER: ""
+    DB_PASSWORD: ""
+    DB_NAME: ""
+  azureOpenAI:
+    AZURE_OPENAI_ENDPOINT: ""
+    AZURE_OPENAI_KEY: ""
+    AZURE_OPENAI_DEPLOYMENT: ""
+
+apiService:
+  enabled: true
+  name: api-service
+  replicaCount: 1
+  image:
+    repository: bankingappdev.azurecr.io/api-service
+    tag: v5
+    pullPolicy: ""
+  containerPort: 3000
+  service:
+    type: ClusterIP
+    port: 3000
+  probes:
+    readiness:
+      path: /ready
+      initialDelaySeconds: 10
+      periodSeconds: 5
+    liveness:
+      path: /health
+      initialDelaySeconds: 30
+      periodSeconds: 10
+  hpa:
+    enabled: true
+    minReplicas: 1
+    maxReplicas: 3
+    cpuAverageUtilization: 70
+  resources:
+    requests:
+      cpu: 100m
+      memory: 128Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+
+workerService:
+  enabled: true
+  name: worker-service
+  replicaCount: 1
+  image:
+    repository: bankingappdev.azurecr.io/worker-service
+    tag: v4
+    pullPolicy: ""
+  pollIntervalMs: "5000"
+  metricsPort: 4000
+  service:
+    enabled: true
+    type: ClusterIP
+    port: 4000
+  hpa:
+    enabled: false
+    minReplicas: 1
+    maxReplicas: 3
+    cpuAverageUtilization: 70
+  resources:
+    requests:
+      cpu: 100m
+      memory: 128Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+
+aiAnalyzerService:
+  enabled: true
+  name: ai-analyzer-service
+  replicaCount: 1
+  image:
+    repository: bankingappdev.azurecr.io/ai-analyzer-service
+    tag: latest
+    pullPolicy: ""
+  containerPort: 5000
+  service:
+    type: ClusterIP
+    port: 5000
+  resources:
+    requests:
+      cpu: 100m
+      memory: 128Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+
+fraudService:
+  enabled: true
+  name: fraud-service
+  replicaCount: 1
+  image:
+    repository: bankingappdev.azurecr.io/fraud-service
+    tag: latest
+    pullPolicy: ""
+  containerPort: 8000
+  service:
+    type: ClusterIP
+    port: 80
+  resources:
+    requests:
+      cpu: 100m
+      memory: 128Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+
+dashboardService:
+  enabled: true
+  name: fraud-dashboard
+  replicaCount: 1
+  image:
+    repository: bankingappdev.azurecr.io/fraud-dashboard
+    tag: latest
+    pullPolicy: ""
+  containerPort: 8080
+  service:
+    type: ClusterIP
+    port: 80
+  resources:
+    requests:
+      cpu: 100m
+      memory: 128Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+
+frontendService:
+  enabled: true
+  name: frontend-service
+  replicaCount: 1
+  image:
+    repository: bankingappdev.azurecr.io/frontend-service
+    tag: latest
+    pullPolicy: ""
+  containerPort: 8080
+  service:
+    type: ClusterIP
+    port: 80
+  resources:
+    requests:
+      cpu: 100m
+      memory: 128Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+
+ingress:
+  enabled: true
+  className: nginx
+  annotations: {}
+  host: ""
+  tls: []
+  paths:
+    frontend:
+      enabled: true
+      path: /
+      pathType: Prefix
+    api:
+      enabled: true
+      path: /api(/|$)(.*)
+      pathType: ImplementationSpecific
+      annotations:
+        nginx.ingress.kubernetes.io/use-regex: "true"
+        nginx.ingress.kubernetes.io/rewrite-target: /$2
+    dashboard:
+      enabled: true
+      path: /dashboard
+      pathType: Prefix

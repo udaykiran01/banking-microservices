@@ -1,0 +1,35 @@
+{{- if .Values.fraudService.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Values.fraudService.name }}
+  namespace: {{ include "banking-app.namespace" . }}
+  labels:
+    app: {{ .Values.fraudService.name }}
+    app.kubernetes.io/name: {{ .Values.fraudService.name }}
+    app.kubernetes.io/instance: {{ .Release.Name }}
+spec:
+  replicas: {{ .Values.fraudService.replicaCount }}
+  selector:
+    matchLabels:
+      app: {{ .Values.fraudService.name }}
+  template:
+    metadata:
+      labels:
+        app: {{ .Values.fraudService.name }}
+{{ include "banking-app.meshLabels" . | indent 8 }}
+    spec:
+{{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+{{ toYaml . | indent 8 }}
+{{- end }}
+      containers:
+        - name: {{ .Values.fraudService.name }}
+          image: "{{ .Values.fraudService.image.repository }}:{{ .Values.fraudService.image.tag }}"
+          imagePullPolicy: {{ default .Values.global.imagePullPolicy .Values.fraudService.image.pullPolicy }}
+          ports:
+            - name: http
+              containerPort: {{ .Values.fraudService.containerPort }}
+          resources:
+{{ toYaml .Values.fraudService.resources | indent 12 }}
+{{- end }}

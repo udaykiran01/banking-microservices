@@ -1,0 +1,106 @@
+{{- if .Values.apiService.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Values.apiService.name }}
+  namespace: {{ include "banking-app.namespace" . }}
+  labels:
+    app: {{ .Values.apiService.name }}
+    app.kubernetes.io/name: {{ .Values.apiService.name }}
+    app.kubernetes.io/instance: {{ .Release.Name }}
+spec:
+  replicas: {{ .Values.apiService.replicaCount }}
+  selector:
+    matchLabels:
+      app: {{ .Values.apiService.name }}
+  template:
+    metadata:
+      labels:
+        app: {{ .Values.apiService.name }}
+{{ include "banking-app.meshLabels" . | indent 8 }}
+    spec:
+{{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+{{ toYaml . | indent 8 }}
+{{- end }}
+      containers:
+        - name: {{ .Values.apiService.name }}
+          image: "{{ .Values.apiService.image.repository }}:{{ .Values.apiService.image.tag }}"
+          imagePullPolicy: {{ default .Values.global.imagePullPolicy .Values.apiService.image.pullPolicy }}
+          ports:
+            - name: http
+              containerPort: {{ .Values.apiService.containerPort }}
+          volumeMounts:
+            - name: secrets-store
+              mountPath: "/mnt/secrets-store"
+              readOnly: true
+          env:
+            - name: PORT
+              value: {{ .Values.apiService.containerPort | quote }}
+            - name: DB_HOST
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.database.existingSecret }}
+                  key: {{ .Values.database.keys.host }}
+            - name: DB_PORT
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.database.existingSecret }}
+                  key: {{ .Values.database.keys.port }}
+            - name: DB_USER
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.database.existingSecret }}
+                  key: {{ .Values.database.keys.user }}
+            - name: DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.database.existingSecret }}
+                  key: {{ .Values.database.keys.password }}
+            - name: DB_NAME
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.database.existingSecret }}
+                  key: {{ .Values.database.keys.name }}
+            - name: DB_SSL
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.database.existingSecret }}
+                  key: DB_SSL
+            - name: KAFKA_BROKER
+              valueFrom:
+                configMapKeyRef:
+                  name: banking-app-config
+                  key: KAFKA_BROKER
+            - name: DD_ENV
+              valueFrom:
+                configMapKeyRef:
+                  name: banking-app-config
+                  key: DD_ENV
+            - name: DD_VERSION
+              valueFrom:
+                configMapKeyRef:
+                  name: banking-app-config
+                  key: DD_VERSION
+          readinessProbe:
+            httpGet:
+              path: {{ .Values.apiService.probes.readiness.path }}
+              port: http
+            initialDelaySeconds: {{ .Values.apiService.probes.readiness.initialDelaySeconds }}
+            periodSeconds: {{ .Values.apiService.probes.readiness.periodSeconds }}
+          livenessProbe:
+            httpGet:
+              path: {{ .Values.apiService.probes.liveness.path }}
+              port: http
+            initialDelaySeconds: {{ .Values.apiService.probes.liveness.initialDelaySeconds }}
+            periodSeconds: {{ .Values.apiService.probes.liveness.periodSeconds }}
+          resources:
+{{ toYaml .Values.apiService.resources | indent 12 }}
+      volumes:
+        - name: secrets-store
+          csi:
+            driver: secrets-store.csi.k8s.io
+            readOnly: true
+            volumeAttributes:
+              secretProviderClass: {{ .Values.keyVault.secretProviderClassName }}
+{{- end }}

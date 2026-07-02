@@ -1,0 +1,19 @@
+apiVersion: v2
+name: banking-app
+description: Helm chart for the Banking Microservices application
+type: application
+
+version: 0.1.0
+appVersion: "1.0.0"
+
+keywords:
+  - banking
+  - microservices
+  - kubernetes
+  - helm
+  - aks
+
+home: https://github.com/udaykiran01/Banking-Microservices
+
+maintainers:
+  - name: Uday Kiran

@@ -1,0 +1,68 @@
+namespaceOverride: banking-dev
+
+global:
+  imagePullPolicy: Always
+  kafkaBroker: kafka:9092
+  mesh:
+    enabled: false
+
+config:
+  ddEnv: dev
+
+apiService:
+  replicaCount: 1
+  image:
+    repository: acrbankingdev001.azurecr.io/banking-api
+    tag: v5
+
+workerService:
+  replicaCount: 1
+  image:
+    repository: acrbankingdev001.azurecr.io/worker-service
+    tag: v7
+
+aiAnalyzerService:
+  image:
+    repository: acrbankingdev001.azurecr.io/ai-analyzer-service
+    tag: v1
+
+fraudService:
+  image:
+    repository: acrbankingdev001.azurecr.io/fraud-service
+    tag: v2
+
+dashboardService:
+  image:
+    repository: acrbankingdev001.azurecr.io/fraud-dashboard
+    tag: v1
+
+keyVault:
+  enabled: true
+  name: kv-banking-uday-dev
+  tenantId: "70f40fd8-2df6-42e3-bcb7-5915a4bea51a"
+  clientId: "c0e3caf4-52b7-44d6-8b17-a5003616a7d4"
+  secretProviderClassName: postgres-kv-provider
+  syncedSecretName: postgres-secret-kv    
+
+ingress:
+  enabled: true
+  className: nginx
+  host: ""
+  annotations: {}
+
+  paths:
+    frontend:
+      enabled: true
+      path: /
+      pathType: Prefix
+
+    dashboard:
+      enabled: true
+      path: /dashboard
+      pathType: Prefix
+
+    api:
+      enabled: true
+      path: /api
+      pathType: Prefix
+      annotations: {}
