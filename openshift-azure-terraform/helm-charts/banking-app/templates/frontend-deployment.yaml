@@ -1,0 +1,35 @@
+{{- if .Values.frontendService.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Values.frontendService.name }}
+  namespace: {{ include "banking-app.namespace" . }}
+  labels:
+    app: {{ .Values.frontendService.name }}
+    app.kubernetes.io/name: {{ .Values.frontendService.name }}
+    app.kubernetes.io/instance: {{ .Release.Name }}
+spec:
+  replicas: {{ .Values.frontendService.replicaCount }}
+  selector:
+    matchLabels:
+      app: {{ .Values.frontendService.name }}
+  template:
+    metadata:
+      labels:
+        app: {{ .Values.frontendService.name }}
+{{ include "banking-app.meshLabels" . | indent 8 }}
+    spec:
+{{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+{{ toYaml . | indent 8 }}
+{{- end }}
+      containers:
+        - name: {{ .Values.frontendService.name }}
+          image: "{{ .Values.frontendService.image.repository }}:{{ .Values.frontendService.image.tag }}"
+          imagePullPolicy: {{ default .Values.global.imagePullPolicy .Values.frontendService.image.pullPolicy }}
+          ports:
+            - name: http
+              containerPort: {{ .Values.frontendService.containerPort }}
+          resources:
+{{ toYaml .Values.frontendService.resources | indent 12 }}
+{{- end }}

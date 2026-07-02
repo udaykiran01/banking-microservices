@@ -1,0 +1,43 @@
+{{- if and .Values.apiService.enabled .Values.apiService.hpa.enabled }}
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: {{ .Values.apiService.name }}-hpa
+  namespace: {{ include "banking-app.namespace" . }}
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: {{ .Values.apiService.name }}
+  minReplicas: {{ .Values.apiService.hpa.minReplicas }}
+  maxReplicas: {{ .Values.apiService.hpa.maxReplicas }}
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: {{ .Values.apiService.hpa.cpuAverageUtilization }}
+{{- end }}
+{{- if and .Values.workerService.enabled .Values.workerService.hpa.enabled }}
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: {{ .Values.workerService.name }}-hpa
+  namespace: {{ include "banking-app.namespace" . }}
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: {{ .Values.workerService.name }}
+  minReplicas: {{ .Values.workerService.hpa.minReplicas }}
+  maxReplicas: {{ .Values.workerService.hpa.maxReplicas }}
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: {{ .Values.workerService.hpa.cpuAverageUtilization }}
+{{- end }}

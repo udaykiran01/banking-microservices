@@ -1,7 +1,7 @@
 const winston = require("winston");
 const fs = require("fs");
 
-const logDir = "/app/logs";
+const logDir = "/tmp/logs";
 
 if (!fs.existsSync(logDir)) {
   fs.mkdirSync(logDir, { recursive: true });

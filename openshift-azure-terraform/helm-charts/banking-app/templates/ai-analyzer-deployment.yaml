@@ -1,0 +1,56 @@
+{{- if .Values.aiAnalyzerService.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Values.aiAnalyzerService.name }}
+  namespace: {{ include "banking-app.namespace" . }}
+  labels:
+    app: {{ .Values.aiAnalyzerService.name }}
+    app.kubernetes.io/name: {{ .Values.aiAnalyzerService.name }}
+    app.kubernetes.io/instance: {{ .Release.Name }}
+spec:
+  replicas: {{ .Values.aiAnalyzerService.replicaCount }}
+  selector:
+    matchLabels:
+      app: {{ .Values.aiAnalyzerService.name }}
+  template:
+    metadata:
+      labels:
+        app: {{ .Values.aiAnalyzerService.name }}
+{{ include "banking-app.meshLabels" . | indent 8 }}
+    spec:
+{{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+{{ toYaml . | indent 8 }}
+{{- end }}
+      containers:
+        - name: {{ .Values.aiAnalyzerService.name }}
+          image: "{{ .Values.aiAnalyzerService.image.repository }}:{{ .Values.aiAnalyzerService.image.tag }}"
+          imagePullPolicy: {{ default .Values.global.imagePullPolicy .Values.aiAnalyzerService.image.pullPolicy }}
+          ports:
+            - name: http
+              containerPort: {{ .Values.aiAnalyzerService.containerPort }}
+          env:
+            - name: PORT
+              value: {{ .Values.aiAnalyzerService.containerPort | quote }}
+            - name: AZURE_OPENAI_ENDPOINT
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.azureOpenAI.existingSecret }}
+                  key: {{ .Values.azureOpenAI.keys.endpoint }}
+                  optional: true
+            - name: AZURE_OPENAI_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.azureOpenAI.existingSecret }}
+                  key: {{ .Values.azureOpenAI.keys.key }}
+                  optional: true
+            - name: AZURE_OPENAI_DEPLOYMENT
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.azureOpenAI.existingSecret }}
+                  key: {{ .Values.azureOpenAI.keys.deployment }}
+                  optional: true
+          resources:
+{{ toYaml .Values.aiAnalyzerService.resources | indent 12 }}
+{{- end }}

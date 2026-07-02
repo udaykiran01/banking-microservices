@@ -1,0 +1,49 @@
+{{- if .Values.workerService.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Values.workerService.name }}
+  namespace: {{ include "banking-app.namespace" . }}
+  labels:
+    app: {{ .Values.workerService.name }}
+    app.kubernetes.io/name: {{ .Values.workerService.name }}
+    app.kubernetes.io/instance: {{ .Release.Name }}
+spec:
+  replicas: {{ .Values.workerService.replicaCount }}
+  selector:
+    matchLabels:
+      app: {{ .Values.workerService.name }}
+  template:
+    metadata:
+      labels:
+        app: {{ .Values.workerService.name }}
+{{ include "banking-app.meshLabels" . | indent 8 }}
+    spec:
+{{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+{{ toYaml . | indent 8 }}
+{{- end }}
+      containers:
+        - name: {{ .Values.workerService.name }}
+          image: "{{ .Values.workerService.image.repository }}:{{ .Values.workerService.image.tag }}"
+          imagePullPolicy: {{ default .Values.global.imagePullPolicy .Values.workerService.image.pullPolicy }}
+          ports:
+            - name: metrics
+              containerPort: {{ .Values.workerService.metricsPort }}
+          env:
+            - name: API_BASE_URL
+              value: "http://{{ .Values.apiService.name }}:{{ .Values.apiService.service.port }}"
+            - name: POLL_INTERVAL_MS
+              value: {{ .Values.workerService.pollIntervalMs | quote }}
+            - name: METRICS_PORT
+              value: {{ .Values.workerService.metricsPort | quote }}
+            - name: FRAUD_SERVICE_URL
+              value: "http://{{ .Values.fraudService.name }}:{{ .Values.fraudService.service.port }}/predict"
+            - name: KAFKA_BROKER
+              valueFrom:
+                configMapKeyRef:
+                  name: banking-app-config
+                  key: KAFKA_BROKER
+          resources:
+{{ toYaml .Values.workerService.resources | indent 12 }}
+{{- end }}

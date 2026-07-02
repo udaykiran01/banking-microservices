@@ -1,0 +1,5 @@
+{{/*
+The worker deployment is rendered from worker-service-deployment.yaml.
+This file is kept so older references to templates/worker-deployment.yaml still
+find an intentional chart entry instead of an empty placeholder.
+*/}}

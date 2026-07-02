@@ -1,0 +1,35 @@
+{{- if .Values.dashboardService.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Values.dashboardService.name }}
+  namespace: {{ include "banking-app.namespace" . }}
+  labels:
+    app: {{ .Values.dashboardService.name }}
+    app.kubernetes.io/name: {{ .Values.dashboardService.name }}
+    app.kubernetes.io/instance: {{ .Release.Name }}
+spec:
+  replicas: {{ .Values.dashboardService.replicaCount }}
+  selector:
+    matchLabels:
+      app: {{ .Values.dashboardService.name }}
+  template:
+    metadata:
+      labels:
+        app: {{ .Values.dashboardService.name }}
+{{ include "banking-app.meshLabels" . | indent 8 }}
+    spec:
+{{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+{{ toYaml . | indent 8 }}
+{{- end }}
+      containers:
+        - name: {{ .Values.dashboardService.name }}
+          image: "{{ .Values.dashboardService.image.repository }}:{{ .Values.dashboardService.image.tag }}"
+          imagePullPolicy: {{ default .Values.global.imagePullPolicy .Values.dashboardService.image.pullPolicy }}
+          ports:
+            - name: http
+              containerPort: {{ .Values.dashboardService.containerPort }}
+          resources:
+{{ toYaml .Values.dashboardService.resources | indent 12 }}
+{{- end }}
