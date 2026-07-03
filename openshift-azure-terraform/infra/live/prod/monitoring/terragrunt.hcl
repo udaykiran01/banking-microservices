@@ -1,0 +1,24 @@
+include {
+  path = find_in_parent_folders("root.hcl")
+}
+
+terraform {
+  source = "../../../modules/monitoring"
+}
+
+locals {
+  env = read_terragrunt_config(find_in_parent_folders("env.hcl"))
+}
+
+dependency "resource_group" {
+  config_path = "../resource-group"
+}
+
+inputs = {
+  environment         = local.env.locals.environment
+  resource_group_name = dependency.resource_group.outputs.resource_group_name
+  location            = local.env.locals.location
+
+  retention_in_days             = 90
+  enable_defender_for_containers = true
+}

@@ -60,3 +60,8 @@ variable "high_availability_mode" {
 variable "database_name" {
   type = string
 }
+
+variable "log_analytics_workspace_id" {
+  type    = string
+  default = null
+}

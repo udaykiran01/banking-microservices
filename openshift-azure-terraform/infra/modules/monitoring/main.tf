@@ -1,40 +1,31 @@
-provider "kubernetes" {
-  config_path = null
-
-  host                   = yamldecode(var.kube_config).clusters[0].cluster.server
-  client_certificate     = base64decode(yamldecode(var.kube_config).users[0].user.client-certificate-data)
-  client_key             = base64decode(yamldecode(var.kube_config).users[0].user.client-key-data)
-  cluster_ca_certificate = base64decode(yamldecode(var.kube_config).clusters[0].cluster.certificate-authority-data)
+resource "azurerm_log_analytics_workspace" "this" {
+  name                = "law-banking-${var.environment}"
+  location            = var.location
+  resource_group_name = var.resource_group_name
+  sku                 = "PerGB2018"
+  retention_in_days   = var.retention_in_days
 }
 
-provider "helm" {
-  kubernetes = {
-    host                   = yamldecode(var.kube_config).clusters[0].cluster.server
-    client_certificate     = base64decode(yamldecode(var.kube_config).users[0].user.client-certificate-data)
-    client_key             = base64decode(yamldecode(var.kube_config).users[0].user.client-key-data)
-    cluster_ca_certificate = base64decode(yamldecode(var.kube_config).clusters[0].cluster.certificate-authority-data)
+resource "azurerm_monitor_diagnostic_setting" "targets" {
+  for_each = var.diagnostic_target_resource_ids
+
+  name                       = "diag-${each.key}-to-law"
+  target_resource_id         = each.value
+  log_analytics_workspace_id = azurerm_log_analytics_workspace.this.id
+
+  enabled_log {
+    category_group = "allLogs"
+  }
+
+  metric {
+    category = "AllMetrics"
+    enabled  = true
   }
 }
 
-resource "helm_release" "kube_prometheus_stack" {
-  name             = "monitoring"
-  repository       = "https://prometheus-community.github.io/helm-charts"
-  chart            = "kube-prometheus-stack"
-  namespace        = "monitoring"
-  create_namespace = true
+resource "azurerm_security_center_subscription_pricing" "defender_containers" {
+  count = var.enable_defender_for_containers ? 1 : 0
 
-  values = [
-    <<EOF
-grafana:
-  adminPassword: "admin123"
-
-prometheus:
-  prometheusSpec:
-    serviceMonitorSelectorNilUsesHelmValues: false
-    podMonitorSelectorNilUsesHelmValues: false
-
-alertmanager:
-  enabled: true
-EOF
-  ]
+  tier          = "Standard"
+  resource_type = "Containers"
 }

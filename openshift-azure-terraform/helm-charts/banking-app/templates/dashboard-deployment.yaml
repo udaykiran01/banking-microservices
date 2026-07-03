@@ -17,8 +17,10 @@ spec:
     metadata:
       labels:
         app: {{ .Values.dashboardService.name }}
+{{ include "banking-app.activeColorLabel" . | indent 8 }}
 {{ include "banking-app.meshLabels" . | indent 8 }}
     spec:
+      serviceAccountName: {{ .Values.serviceAccount.name }}
 {{- with .Values.imagePullSecrets }}
       imagePullSecrets:
 {{ toYaml . | indent 8 }}

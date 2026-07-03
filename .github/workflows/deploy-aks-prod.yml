@@ -1,0 +1,184 @@
+name: Deploy AKS Prod
+
+on:
+  workflow_dispatch:
+    inputs:
+      image_sha:
+        description: "Immutable image tag to deploy. Defaults to the workflow commit SHA."
+        required: false
+        type: string
+      canary:
+        description: "Enable API canary deployment"
+        required: true
+        default: false
+        type: boolean
+      canary_weight:
+        description: "NGINX canary traffic weight"
+        required: true
+        default: "10"
+        type: string
+
+permissions:
+  contents: read
+  id-token: write
+  security-events: write
+
+env:
+  ACR_NAME: acrbankingprod001
+  AKS_RESOURCE_GROUP: rg-banking-prod
+  AKS_CLUSTER_NAME: banking-openshift-prod
+  NAMESPACE: banking-prod
+  CHART_PATH: openshift-azure-terraform/helm-charts/banking-app
+
+jobs:
+  deploy-prod:
+    runs-on: ubuntu-latest
+    environment: prod
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Resolve image tag
+        id: image
+        run: |
+          if [ -n "${{ inputs.image_sha }}" ]; then
+            echo "tag=${{ inputs.image_sha }}" >> "$GITHUB_OUTPUT"
+          else
+            echo "tag=${{ github.sha }}" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Azure Login using OIDC
+        uses: azure/login@v2
+        with:
+          client-id: ${{ vars.AZURE_CLIENT_ID }}
+          tenant-id: ${{ vars.AZURE_TENANT_ID }}
+          subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Login to ACR
+        run: az acr login --name "$ACR_NAME"
+
+      - name: Install Syft and Cosign
+        run: |
+          curl -sSfL https://raw.githubusercontent.com/anchore/syft/main/install.sh | sh -s -- -b /usr/local/bin
+          curl -sSfL https://raw.githubusercontent.com/sigstore/cosign/main/install.sh | sh -s -- -b /usr/local/bin
+          syft version
+          cosign version
+
+      - name: Build immutable images
+        run: |
+          docker build -t "$ACR_NAME.azurecr.io/banking-api:${{ steps.image.outputs.tag }}" ./api-service
+          docker build -t "$ACR_NAME.azurecr.io/worker-service:${{ steps.image.outputs.tag }}" ./worker-service
+          docker build -t "$ACR_NAME.azurecr.io/ai-analyzer-service:${{ steps.image.outputs.tag }}" ./ai-analyzer-service
+          docker build -t "$ACR_NAME.azurecr.io/fraud-service:${{ steps.image.outputs.tag }}" ./fraud-service
+          docker build -t "$ACR_NAME.azurecr.io/fraud-dashboard:${{ steps.image.outputs.tag }}" ./fraud-dashboard
+          docker build -t "$ACR_NAME.azurecr.io/frontend-service:${{ steps.image.outputs.tag }}" ./frontend
+
+      - name: Trivy scan API image
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: ${{ env.ACR_NAME }}.azurecr.io/banking-api:${{ steps.image.outputs.tag }}
+          severity: HIGH,CRITICAL
+          exit-code: 1
+
+      - name: Trivy scan worker image
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: ${{ env.ACR_NAME }}.azurecr.io/worker-service:${{ steps.image.outputs.tag }}
+          severity: HIGH,CRITICAL
+          exit-code: 1
+
+      - name: Trivy scan AI analyzer image
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: ${{ env.ACR_NAME }}.azurecr.io/ai-analyzer-service:${{ steps.image.outputs.tag }}
+          severity: HIGH,CRITICAL
+          exit-code: 1
+
+      - name: Trivy scan fraud service image
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: ${{ env.ACR_NAME }}.azurecr.io/fraud-service:${{ steps.image.outputs.tag }}
+          severity: HIGH,CRITICAL
+          exit-code: 1
+
+      - name: Trivy scan dashboard image
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: ${{ env.ACR_NAME }}.azurecr.io/fraud-dashboard:${{ steps.image.outputs.tag }}
+          severity: HIGH,CRITICAL
+          exit-code: 1
+
+      - name: Trivy scan frontend image
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: ${{ env.ACR_NAME }}.azurecr.io/frontend-service:${{ steps.image.outputs.tag }}
+          severity: HIGH,CRITICAL
+          exit-code: 1
+
+      - name: Generate SBOMs
+        run: |
+          mkdir -p sbom
+          for image in banking-api worker-service ai-analyzer-service fraud-service fraud-dashboard frontend-service; do
+            syft "$ACR_NAME.azurecr.io/$image:${{ steps.image.outputs.tag }}" -o cyclonedx-json > "sbom/$image-sbom.json"
+          done
+
+      - name: Upload SBOMs
+        uses: actions/upload-artifact@v4
+        with:
+          name: prod-sboms
+          path: sbom/*.json
+
+      - name: Push immutable images
+        run: |
+          for image in banking-api worker-service ai-analyzer-service fraud-service fraud-dashboard frontend-service; do
+            docker push "$ACR_NAME.azurecr.io/$image:${{ steps.image.outputs.tag }}"
+          done
+
+      - name: Sign images with keyless Cosign
+        env:
+          COSIGN_YES: "true"
+        run: |
+          for image in banking-api worker-service ai-analyzer-service fraud-service fraud-dashboard frontend-service; do
+            cosign sign "$ACR_NAME.azurecr.io/$image:${{ steps.image.outputs.tag }}"
+          done
+
+      - name: Connect to private AKS
+        run: |
+          az aks get-credentials \
+            --resource-group "$AKS_RESOURCE_GROUP" \
+            --name "$AKS_CLUSTER_NAME" \
+            --overwrite-existing
+
+      - name: Helm lint
+        run: helm lint "$CHART_PATH" -f "$CHART_PATH/values-prod.yaml"
+
+      - name: Deploy Helm Chart
+        run: |
+          helm upgrade --install banking-app "$CHART_PATH" \
+            --namespace "$NAMESPACE" \
+            --create-namespace \
+            --atomic \
+            --wait \
+            --timeout 10m \
+            -f "$CHART_PATH/values-prod.yaml" \
+            --set apiService.image.tag=${{ steps.image.outputs.tag }} \
+            --set workerService.image.tag=${{ steps.image.outputs.tag }} \
+            --set aiAnalyzerService.image.tag=${{ steps.image.outputs.tag }} \
+            --set fraudService.image.tag=${{ steps.image.outputs.tag }} \
+            --set dashboardService.image.tag=${{ steps.image.outputs.tag }} \
+            --set frontendService.image.tag=${{ steps.image.outputs.tag }} \
+            --set keyVault.clientId=${{ vars.BANKING_APP_WORKLOAD_IDENTITY_CLIENT_ID }} \
+            --set serviceAccount.annotations.azure\\.workload\\.identity/client-id=${{ vars.BANKING_APP_WORKLOAD_IDENTITY_CLIENT_ID }} \
+            --set deploymentStrategy.canary.enabled=${{ inputs.canary }} \
+            --set deploymentStrategy.canary.imageTag=${{ steps.image.outputs.tag }} \
+            --set deploymentStrategy.canary.weight=${{ inputs.canary_weight }}
+
+      - name: Verify rollout
+        run: |
+          kubectl rollout status deployment/api-service -n "$NAMESPACE"
+          kubectl rollout status deployment/worker-service -n "$NAMESPACE"
+          kubectl rollout status deployment/ai-analyzer-service -n "$NAMESPACE"
+          kubectl rollout status deployment/fraud-service -n "$NAMESPACE"
+          kubectl rollout status deployment/fraud-dashboard -n "$NAMESPACE"
+          kubectl rollout status deployment/frontend-service -n "$NAMESPACE"

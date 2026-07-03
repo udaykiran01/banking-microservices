@@ -9,3 +9,9 @@ mesh-scope: {{ .Values.global.mesh.scope | quote }}
 sidecar.istio.io/inject: "true"
 {{- end }}
 {{- end -}}
+
+{{- define "banking-app.activeColorLabel" -}}
+{{- if .Values.deploymentStrategy.blueGreen.enabled }}
+rollout-color: {{ .Values.deploymentStrategy.blueGreen.activeColor | quote }}
+{{- end }}
+{{- end -}}

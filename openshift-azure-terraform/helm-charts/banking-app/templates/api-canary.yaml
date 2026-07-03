@@ -1,0 +1,149 @@
+{{- if and .Values.apiService.enabled .Values.deploymentStrategy.canary.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Values.apiService.name }}-canary
+  namespace: {{ include "banking-app.namespace" . }}
+  labels:
+    app: {{ .Values.apiService.name }}
+    rollout-track: canary
+spec:
+  replicas: {{ .Values.deploymentStrategy.canary.replicaCount }}
+  selector:
+    matchLabels:
+      app: {{ .Values.apiService.name }}
+      rollout-track: canary
+  template:
+    metadata:
+      labels:
+        app: {{ .Values.apiService.name }}
+        rollout-track: canary
+{{ include "banking-app.meshLabels" . | indent 8 }}
+    spec:
+      serviceAccountName: {{ .Values.serviceAccount.name }}
+{{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+{{ toYaml . | indent 8 }}
+{{- end }}
+      containers:
+        - name: {{ .Values.apiService.name }}
+          image: "{{ .Values.apiService.image.repository }}:{{ default .Values.apiService.image.tag .Values.deploymentStrategy.canary.imageTag }}"
+          imagePullPolicy: {{ default .Values.global.imagePullPolicy .Values.apiService.image.pullPolicy }}
+          ports:
+            - name: http
+              containerPort: {{ .Values.apiService.containerPort }}
+          volumeMounts:
+            - name: secrets-store
+              mountPath: "/mnt/secrets-store"
+              readOnly: true
+          env:
+            - name: PORT
+              value: {{ .Values.apiService.containerPort | quote }}
+            - name: DB_HOST
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.database.existingSecret }}
+                  key: {{ .Values.database.keys.host }}
+            - name: DB_PORT
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.database.existingSecret }}
+                  key: {{ .Values.database.keys.port }}
+            - name: DB_USER
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.database.existingSecret }}
+                  key: {{ .Values.database.keys.user }}
+            - name: DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.database.existingSecret }}
+                  key: {{ .Values.database.keys.password }}
+            - name: DB_NAME
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.database.existingSecret }}
+                  key: {{ .Values.database.keys.name }}
+            - name: DB_SSL
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.database.existingSecret }}
+                  key: DB_SSL
+            - name: KAFKA_BROKER
+              valueFrom:
+                configMapKeyRef:
+                  name: banking-app-config
+                  key: KAFKA_BROKER
+          readinessProbe:
+            httpGet:
+              path: {{ .Values.apiService.probes.readiness.path }}
+              port: http
+            initialDelaySeconds: {{ .Values.apiService.probes.readiness.initialDelaySeconds }}
+            periodSeconds: {{ .Values.apiService.probes.readiness.periodSeconds }}
+          livenessProbe:
+            httpGet:
+              path: {{ .Values.apiService.probes.liveness.path }}
+              port: http
+            initialDelaySeconds: {{ .Values.apiService.probes.liveness.initialDelaySeconds }}
+            periodSeconds: {{ .Values.apiService.probes.liveness.periodSeconds }}
+          resources:
+{{ toYaml .Values.apiService.resources | indent 12 }}
+      volumes:
+        - name: secrets-store
+          csi:
+            driver: secrets-store.csi.k8s.io
+            readOnly: true
+            volumeAttributes:
+              secretProviderClass: {{ .Values.keyVault.secretProviderClassName }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ .Values.apiService.name }}-canary
+  namespace: {{ include "banking-app.namespace" . }}
+  labels:
+    app: {{ .Values.apiService.name }}
+    rollout-track: canary
+spec:
+  type: {{ .Values.apiService.service.type }}
+  selector:
+    app: {{ .Values.apiService.name }}
+    rollout-track: canary
+  ports:
+    - name: http
+      port: {{ .Values.apiService.service.port }}
+      targetPort: http
+{{- if and .Values.ingress.enabled .Values.ingress.paths.api.enabled .Values.deploymentStrategy.canary.useNginxCanary }}
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: banking-api-canary-ingress
+  namespace: {{ include "banking-app.namespace" . }}
+  annotations:
+    nginx.ingress.kubernetes.io/canary: "true"
+    nginx.ingress.kubernetes.io/canary-weight: {{ .Values.deploymentStrategy.canary.weight | quote }}
+{{- with .Values.ingress.paths.api.annotations }}
+{{ toYaml . | indent 4 }}
+{{- end }}
+spec:
+{{- if .Values.ingress.className }}
+  ingressClassName: {{ .Values.ingress.className }}
+{{- end }}
+{{- with .Values.ingress.tls }}
+  tls:
+{{ toYaml . | indent 4 }}
+{{- end }}
+  rules:
+    - {{- if .Values.ingress.host }} host: {{ .Values.ingress.host | quote }}{{- end }}
+      http:
+        paths:
+          - path: {{ .Values.ingress.paths.api.path }}
+            pathType: {{ .Values.ingress.paths.api.pathType }}
+            backend:
+              service:
+                name: {{ .Values.apiService.name }}-canary
+                port:
+                  number: {{ .Values.apiService.service.port }}
+{{- end }}
+{{- end }}

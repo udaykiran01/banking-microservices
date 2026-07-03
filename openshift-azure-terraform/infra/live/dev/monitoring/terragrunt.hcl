@@ -6,10 +6,19 @@ terraform {
   source = "../../../modules/monitoring"
 }
 
-dependency "aks" {
-  config_path = "../aks"
+locals {
+  env = read_terragrunt_config(find_in_parent_folders("env.hcl"))
+}
+
+dependency "resource_group" {
+  config_path = "../resource-group"
 }
 
 inputs = {
-  kube_config = dependency.aks.outputs.kube_config
+  environment         = local.env.locals.environment
+  resource_group_name = dependency.resource_group.outputs.resource_group_name
+  location            = local.env.locals.location
+
+  retention_in_days              = 30
+  enable_defender_for_containers = false
 }

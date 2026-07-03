@@ -1,0 +1,197 @@
+{{- if .Values.networkPolicies.enabled }}
+{{- $ns := include "banking-app.namespace" . }}
+{{- if .Values.networkPolicies.defaultDeny }}
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: default-deny
+  namespace: {{ $ns }}
+spec:
+  podSelector: {}
+  policyTypes:
+    - Ingress
+    - Egress
+---
+{{- end }}
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-dns-egress
+  namespace: {{ $ns }}
+spec:
+  podSelector: {}
+  policyTypes:
+    - Egress
+  egress:
+    - to:
+        - namespaceSelector:
+            matchLabels:
+{{ toYaml .Values.networkPolicies.kubeDnsNamespaceSelector | indent 14 }}
+          podSelector:
+            matchLabels:
+{{ toYaml .Values.networkPolicies.kubeDnsPodSelector | indent 14 }}
+      ports:
+        - protocol: UDP
+          port: 53
+        - protocol: TCP
+          port: 53
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-web-to-api
+  namespace: {{ $ns }}
+spec:
+  podSelector:
+    matchLabels:
+      app: {{ .Values.apiService.name }}
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              app: {{ .Values.frontendService.name }}
+        - podSelector:
+            matchLabels:
+              app: {{ .Values.dashboardService.name }}
+      ports:
+        - protocol: TCP
+          port: {{ .Values.apiService.containerPort }}
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-web-api-egress
+  namespace: {{ $ns }}
+spec:
+  podSelector:
+    matchExpressions:
+      - key: app
+        operator: In
+        values:
+          - {{ .Values.frontendService.name }}
+          - {{ .Values.dashboardService.name }}
+  policyTypes:
+    - Egress
+  egress:
+    - to:
+        - podSelector:
+            matchLabels:
+              app: {{ .Values.apiService.name }}
+      ports:
+        - protocol: TCP
+          port: {{ .Values.apiService.containerPort }}
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-worker-to-fraud
+  namespace: {{ $ns }}
+spec:
+  podSelector:
+    matchLabels:
+      app: {{ .Values.fraudService.name }}
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              app: {{ .Values.workerService.name }}
+      ports:
+        - protocol: TCP
+          port: {{ .Values.fraudService.containerPort }}
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-worker-fraud-egress
+  namespace: {{ $ns }}
+spec:
+  podSelector:
+    matchLabels:
+      app: {{ .Values.workerService.name }}
+  policyTypes:
+    - Egress
+  egress:
+    - to:
+        - podSelector:
+            matchLabels:
+              app: {{ .Values.fraudService.name }}
+      ports:
+        - protocol: TCP
+          port: {{ .Values.fraudService.containerPort }}
+{{- if .Values.networkPolicies.kafka.enabled }}
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-kafka-egress
+  namespace: {{ $ns }}
+spec:
+  podSelector:
+    matchExpressions:
+      - key: app
+        operator: In
+        values:
+          - {{ .Values.apiService.name }}
+          - {{ .Values.workerService.name }}
+  policyTypes:
+    - Egress
+  egress:
+    - to:
+        - namespaceSelector:
+            matchLabels:
+{{ toYaml .Values.networkPolicies.kafka.namespaceSelector | indent 14 }}
+          podSelector:
+            matchLabels:
+{{ toYaml .Values.networkPolicies.kafka.podSelector | indent 14 }}
+      ports:
+        - protocol: TCP
+          port: {{ .Values.networkPolicies.kafka.port }}
+{{- end }}
+{{- if .Values.networkPolicies.postgres.enabled }}
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-postgres-egress
+  namespace: {{ $ns }}
+spec:
+  podSelector:
+    matchExpressions:
+      - key: app
+        operator: In
+        values:
+          - {{ .Values.workerService.name }}
+          - {{ .Values.fraudService.name }}
+          - {{ .Values.apiService.name }}
+  policyTypes:
+    - Egress
+  egress:
+    - to:
+        - ipBlock:
+            cidr: {{ .Values.networkPolicies.postgres.cidr | quote }}
+      ports:
+        - protocol: TCP
+          port: {{ .Values.networkPolicies.postgres.port }}
+{{- end }}
+{{- if .Values.networkPolicies.monitoring.enabled }}
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-monitoring-ingress
+  namespace: {{ $ns }}
+spec:
+  podSelector: {}
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+{{ toYaml .Values.networkPolicies.monitoring.namespaceSelector | indent 14 }}
+{{- end }}
+{{- end }}

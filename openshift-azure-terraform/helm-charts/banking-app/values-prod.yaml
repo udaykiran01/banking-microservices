@@ -1,26 +1,128 @@
 namespaceOverride: banking-prod
 
+global:
+  imagePullPolicy: IfNotPresent
+  kafkaBroker: my-cluster-kafka-bootstrap.kafka.svc:9092
+  mesh:
+    enabled: true
+    scope: critical
+
+serviceAccount:
+  create: true
+  name: banking-app
+  annotations:
+    azure.workload.identity/client-id: ""
+  labels:
+    azure.workload.identity/use: "true"
+
+deploymentStrategy:
+  blueGreen:
+    enabled: true
+    activeColor: blue
+    previewColor: green
+  canary:
+    enabled: false
+    useNginxCanary: false
+    weight: 10
+    replicaCount: 1
+    imageTag: ""
+
 config:
   ddEnv: prod
+  ddVersion: "1.0.0"
+  dbSsl: "true"
 
 apiService:
-  replicaCount: 2
+  replicaCount: 3
   image:
-    tag: v5
+    repository: acrbankingprod001.azurecr.io/banking-api
+    tag: stable-sha-placeholder
   hpa:
-    minReplicas: 2
-    maxReplicas: 5
+    enabled: true
+    minReplicas: 3
+    maxReplicas: 10
 
 workerService:
+  replicaCount: 3
+  image:
+    repository: acrbankingprod001.azurecr.io/worker-service
+    tag: stable-sha-placeholder
+  hpa:
+    enabled: true
+    minReplicas: 3
+    maxReplicas: 10
+
+aiAnalyzerService:
   replicaCount: 2
   image:
-    tag: v4
+    repository: acrbankingprod001.azurecr.io/ai-analyzer-service
+    tag: stable-sha-placeholder
 
-frontendService:
-  replicaCount: 2
+fraudService:
+  replicaCount: 3
+  image:
+    repository: acrbankingprod001.azurecr.io/fraud-service
+    tag: stable-sha-placeholder
 
 dashboardService:
   replicaCount: 2
+  image:
+    repository: acrbankingprod001.azurecr.io/fraud-dashboard
+    tag: stable-sha-placeholder
+
+frontendService:
+  replicaCount: 3
+  image:
+    repository: acrbankingprod001.azurecr.io/frontend-service
+    tag: stable-sha-placeholder
+
+keyVault:
+  enabled: true
+  name: kv-banking-uday-prod
+  tenantId: "70f40fd8-2df6-42e3-bcb7-5915a4bea51a"
+  clientId: ""
+  secretProviderClassName: postgres-kv-provider
+  syncedSecretName: postgres-secret-kv
 
 ingress:
+  enabled: true
+  className: nginx
   host: ""
+  annotations:
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+  tls: []
+  paths:
+    frontend:
+      enabled: true
+      path: /
+      pathType: Prefix
+    dashboard:
+      enabled: true
+      path: /dashboard
+      pathType: Prefix
+    api:
+      enabled: true
+      path: /api(/|$)(.*)
+      pathType: ImplementationSpecific
+      annotations:
+        nginx.ingress.kubernetes.io/use-regex: "true"
+        nginx.ingress.kubernetes.io/rewrite-target: /$2
+
+networkPolicies:
+  enabled: true
+  defaultDeny: true
+  postgres:
+    enabled: true
+    cidr: "10.20.5.0/24"
+    port: 5432
+  kafka:
+    enabled: true
+    namespaceSelector:
+      kubernetes.io/metadata.name: kafka
+    podSelector:
+      app.kubernetes.io/name: kafka
+    port: 9092
+  monitoring:
+    enabled: true
+    namespaceSelector:
+      kubernetes.io/metadata.name: monitoring

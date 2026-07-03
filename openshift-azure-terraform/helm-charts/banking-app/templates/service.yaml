@@ -10,6 +10,7 @@ spec:
   type: {{ .Values.apiService.service.type }}
   selector:
     app: {{ .Values.apiService.name }}
+{{ include "banking-app.activeColorLabel" . | indent 4 }}
   ports:
     - name: http
       port: {{ .Values.apiService.service.port }}
@@ -28,6 +29,7 @@ spec:
   type: {{ .Values.workerService.service.type }}
   selector:
     app: {{ .Values.workerService.name }}
+{{ include "banking-app.activeColorLabel" . | indent 4 }}
   ports:
     - name: metrics
       port: {{ .Values.workerService.service.port }}
@@ -46,6 +48,7 @@ spec:
   type: {{ .Values.aiAnalyzerService.service.type }}
   selector:
     app: {{ .Values.aiAnalyzerService.name }}
+{{ include "banking-app.activeColorLabel" . | indent 4 }}
   ports:
     - name: http
       port: {{ .Values.aiAnalyzerService.service.port }}
@@ -64,6 +67,7 @@ spec:
   type: {{ .Values.fraudService.service.type }}
   selector:
     app: {{ .Values.fraudService.name }}
+{{ include "banking-app.activeColorLabel" . | indent 4 }}
   ports:
     - name: http
       port: {{ .Values.fraudService.service.port }}
@@ -82,6 +86,7 @@ spec:
   type: {{ .Values.dashboardService.service.type }}
   selector:
     app: {{ .Values.dashboardService.name }}
+{{ include "banking-app.activeColorLabel" . | indent 4 }}
   ports:
     - name: http
       port: {{ .Values.dashboardService.service.port }}
@@ -100,6 +105,7 @@ spec:
   type: {{ .Values.frontendService.service.type }}
   selector:
     app: {{ .Values.frontendService.name }}
+{{ include "banking-app.activeColorLabel" . | indent 4 }}
   ports:
     - name: http
       port: {{ .Values.frontendService.service.port }}

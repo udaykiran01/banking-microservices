@@ -20,5 +20,6 @@ dependency "vnet" {
 
 inputs = {
   resource_group_name = dependency.resource_group.outputs.resource_group_name
+  location            = local.env.locals.location
   vnet_id             = dependency.vnet.outputs.vnet_id
 }

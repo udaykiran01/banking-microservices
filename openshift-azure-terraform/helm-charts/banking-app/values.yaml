@@ -9,6 +9,24 @@ global:
 
 imagePullSecrets: []
 
+serviceAccount:
+  create: true
+  name: banking-app
+  annotations: {}
+  labels: {}
+
+deploymentStrategy:
+  blueGreen:
+    enabled: false
+    activeColor: blue
+    previewColor: green
+  canary:
+    enabled: false
+    useNginxCanary: false
+    weight: 10
+    replicaCount: 1
+    imageTag: ""
+
 config:
   ddEnv: dev
   ddVersion: "1.0.0"
@@ -206,3 +224,25 @@ ingress:
       enabled: true
       path: /dashboard
       pathType: Prefix
+
+networkPolicies:
+  enabled: false
+  defaultDeny: true
+  kubeDnsNamespaceSelector:
+    kubernetes.io/metadata.name: kube-system
+  kubeDnsPodSelector:
+    k8s-app: kube-dns
+  postgres:
+    enabled: true
+    cidr: "10.20.5.0/24"
+    port: 5432
+  kafka:
+    enabled: true
+    namespaceSelector: {}
+    podSelector:
+      app.kubernetes.io/name: kafka
+    port: 9092
+  monitoring:
+    enabled: true
+    namespaceSelector:
+      kubernetes.io/metadata.name: monitoring
